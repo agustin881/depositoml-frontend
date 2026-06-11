@@ -218,10 +218,9 @@
 <script>
   const API = "https://depositoml-backend-production.up.railway.app";
 
-  // ⬇⬇⬇  CONFIGURAR MAÑANA con los datos de Supabase (Project Settings → API)  ⬇⬇⬇
-  const SUPABASE_URL      = "https://TU-PROYECTO.supabase.co";
-  const SUPABASE_ANON_KEY = "TU_ANON_KEY";
-  // ⬆⬆⬆  La anon key es pública, es seguro ponerla acá  ⬆⬆⬆
+  // Datos de Supabase (la anon key es pública, es seguro que esté acá)
+  const SUPABASE_URL      = "https://flmmgkidltnqlsswiybp.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsbW1na2lkbHRucWxzc3dpeWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjA4NDAsImV4cCI6MjA5NTkzNjg0MH0.IukPTOyweDDepc_VgGYNcOYK1rH-fL9-Vp6l-_uXZ5U";
 
   const configurado = !SUPABASE_URL.includes("TU-PROYECTO") && !SUPABASE_ANON_KEY.includes("TU_ANON_KEY");
   const sb = configurado ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
