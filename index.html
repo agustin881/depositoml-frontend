@@ -15,40 +15,35 @@
     --ok:#2F9E44; --warn:#B88207; --err:#D63B2F;
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bone); color:var(--ink);
-    font-family:'Inter',system-ui,sans-serif; line-height:1.45;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 64px}
-  header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px}
-  header.top h1{
-    font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
-    letter-spacing:.02em; text-transform:uppercase; font-size:34px; margin:0;
-  }
+  body{margin:0; background:var(--bone); color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif; line-height:1.45; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px; margin:0 auto; padding:24px 20px 64px}
+  header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:18px}
+  header.top h1{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+    letter-spacing:.02em; text-transform:uppercase; font-size:32px; margin:0}
   .tagline{color:var(--muted); font-size:14px}
-  .config-warn{
-    margin:14px 0 0; padding:12px 14px; border:1px solid var(--warn);
-    background:#FFF8E8; border-radius:8px; font-size:13.5px; color:#5C4708;
-  }
-  .config-warn code{font-family:'JetBrains Mono',monospace; background:#0001; padding:1px 5px; border-radius:4px}
 
-  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:24px}
+  /* Tabs */
+  .tabs{display:flex; gap:4px; border-bottom:2px solid var(--line); margin-bottom:24px}
+  .tab{font-family:'Barlow Semi Condensed',sans-serif; font-weight:600; text-transform:uppercase;
+    letter-spacing:.03em; font-size:16px; background:none; border:none; cursor:pointer;
+    padding:10px 16px; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-2px}
+  .tab.active{color:var(--ink); border-bottom-color:var(--ink)}
+  .tab:focus-visible{outline:3px solid #1C6DD055; outline-offset:2px}
+  .view{display:none}
+  .view.active{display:block}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
   @media(max-width:720px){.grid{grid-template-columns:1fr}}
 
-  .panel{
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    padding:0; overflow:hidden; display:flex; flex-direction:column;
-  }
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; display:flex; flex-direction:column}
   .panel .bar{height:6px}
   .panel[data-t="flex"] .bar{background:var(--flex)}
   .panel[data-t="colecta"] .bar{background:var(--colecta)}
-  .panel .body{padding:20px 20px 22px}
-
-  .panel h2{
-    font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
-    text-transform:uppercase; letter-spacing:.04em; font-size:22px; margin:0 0 2px;
-  }
+  .panel .body{padding:20px}
+  .panel h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
+    letter-spacing:.04em; font-size:22px; margin:0 0 2px}
   .panel .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
 
   .count{display:flex; align-items:flex-end; gap:10px; margin:6px 0 16px; min-height:58px}
@@ -56,11 +51,8 @@
   .count .lbl{color:var(--muted); font-size:13px; padding-bottom:6px}
   .count.empty .num{color:var(--line)}
 
-  button{
-    font-family:'Inter',sans-serif; font-weight:600; font-size:15px;
-    border:none; border-radius:9px; padding:12px 16px; cursor:pointer;
-    width:100%; transition:transform .04s ease, background .15s ease;
-  }
+  button{font-family:'Inter',sans-serif; font-weight:600; font-size:15px; border:none; border-radius:9px;
+    padding:12px 16px; cursor:pointer; width:100%; transition:transform .04s ease, background .15s ease}
   button:active{transform:translateY(1px)}
   button:focus-visible{outline:3px solid #1C6DD055; outline-offset:2px}
   button:disabled{cursor:not-allowed; opacity:.45}
@@ -70,27 +62,37 @@
   .panel[data-t="colecta"] .btn-print{background:var(--colecta)}
 
   .status{font-size:13px; margin-top:10px; min-height:18px}
-  .status.err{color:var(--err)}
-  .status.ok{color:var(--ok)}
+  .status.err{color:var(--err)} .status.ok{color:var(--ok)}
 
   .list{margin-top:16px; border-top:1px solid var(--line)}
-  .row{
-    display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
-    padding:8px 2px; border-bottom:1px solid var(--line); font-size:13px;
-  }
-  .row .sku{font-family:'JetBrains Mono',monospace; font-weight:500; color:var(--ink)}
+  .row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+    padding:8px 2px; border-bottom:1px solid var(--line); font-size:13px}
+  .row .sku{font-family:'JetBrains Mono',monospace; font-weight:500}
   .row .ti{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .row .u{color:var(--muted); font-size:12px}
-  .group-h{
-    font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
-    margin:16px 0 4px; font-weight:600;
-  }
+  .row .mini{font-size:12px; padding:6px 10px; width:auto; background:#F0EEE6; color:var(--ink); border-radius:7px}
+  .group-h{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+    margin:16px 0 4px; font-weight:600}
   details{margin-top:14px}
   details summary{cursor:pointer; font-size:13px; color:var(--warn); font-weight:600}
-  .pill{
-    font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px;
-    border-radius:20px; background:#F0EEE6; color:var(--muted);
-  }
+  .pill{font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px; border-radius:20px;
+    background:#F0EEE6; color:var(--muted)}
+
+  /* Sección impresas hoy */
+  .reprint{margin-top:22px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px}
+  .reprint h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
+    letter-spacing:.04em; font-size:22px; margin:0 0 14px}
+  .totals{display:flex; gap:24px; flex-wrap:wrap; margin-bottom:8px}
+  .total-box .n{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:38px; line-height:1}
+  .total-box .l{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
+  .reprint-actions{display:flex; gap:10px; flex-wrap:wrap; margin:14px 0}
+  .reprint-actions button{width:auto; padding:10px 14px; font-size:14px; background:#F0EEE6; color:var(--ink)}
+
+  .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px;
+    padding:48px 24px; text-align:center; color:var(--muted)}
+  .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
+
   footer{margin-top:40px; color:var(--muted); font-size:12px; text-align:center}
 </style>
 </head>
@@ -98,55 +100,97 @@
 <div class="wrap">
   <header class="top">
     <h1>Despacho</h1>
-    <span class="tagline">Etiquetas del día, ordenadas por SKU para pickear de una.</span>
+    <span class="tagline">Imprimí por SKU, reimprimí lo del día y verificá la carga.</span>
   </header>
-  <div id="configWarn" class="config-warn" style="display:none">
-    Falta configurar la dirección del backend. Abrí este archivo y reemplazá
-    <code>https://TU-BACKEND.up.railway.app</code> por la URL de tu servicio en Railway.
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" onclick="verTab('impresion', this)">Impresión</button>
+    <button class="tab" onclick="verTab('verificacion', this)">Verificación</button>
+    <button class="tab" onclick="verTab('camiones', this)">Camiones</button>
   </div>
 
-  <div class="grid">
-    <!-- FLEX -->
-    <section class="panel" data-t="flex">
-      <div class="bar"></div>
-      <div class="body">
-        <h2>Flex</h2>
-        <div class="sub">Envíos self-service · logística propia</div>
-        <div class="count empty" id="count-flex"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
-        <button class="btn-find" onclick="buscar('flex')">Buscar pendientes</button>
-        <button class="btn-print" id="print-flex" onclick="imprimir('flex')" disabled>Descargar etiquetas</button>
-        <div class="status" id="status-flex"></div>
-        <div id="list-flex"></div>
-      </div>
-    </section>
+  <!-- ===================== IMPRESIÓN ===================== -->
+  <section id="view-impresion" class="view active">
+    <div class="grid">
+      <section class="panel" data-t="flex">
+        <div class="bar"></div>
+        <div class="body">
+          <h2>Flex</h2>
+          <div class="sub">Self-service · logística propia</div>
+          <div class="count empty" id="count-flex"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
+          <button class="btn-find" onclick="buscar('flex')">Buscar pendientes</button>
+          <button class="btn-print" id="print-flex" onclick="imprimir('flex')" disabled>Descargar etiquetas</button>
+          <div class="status" id="status-flex"></div>
+          <div id="list-flex"></div>
+        </div>
+      </section>
+      <section class="panel" data-t="colecta">
+        <div class="bar"></div>
+        <div class="body">
+          <h2>Colecta</h2>
+          <div class="sub">Cross-docking · lo retira Mercado Libre</div>
+          <div class="count empty" id="count-colecta"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
+          <button class="btn-find" onclick="buscar('colecta')">Buscar pendientes</button>
+          <button class="btn-print" id="print-colecta" onclick="imprimir('colecta')" disabled>Descargar etiquetas</button>
+          <div class="status" id="status-colecta"></div>
+          <div id="list-colecta"></div>
+        </div>
+      </section>
+    </div>
 
-    <!-- COLECTA -->
-    <section class="panel" data-t="colecta">
-      <div class="bar"></div>
-      <div class="body">
-        <h2>Colecta</h2>
-        <div class="sub">Envíos cross-docking · los retira Mercado Libre</div>
-        <div class="count empty" id="count-colecta"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
-        <button class="btn-find" onclick="buscar('colecta')">Buscar pendientes</button>
-        <button class="btn-print" id="print-colecta" onclick="imprimir('colecta')" disabled>Descargar etiquetas</button>
-        <div class="status" id="status-colecta"></div>
-        <div id="list-colecta"></div>
+    <!-- Impresas hoy / reimpresión -->
+    <div class="reprint">
+      <h2>Impresas hoy</h2>
+      <div class="totals">
+        <div class="total-box"><div class="n" id="tot-total">—</div><div class="l">Total</div></div>
+        <div class="total-box"><div class="n" id="tot-flex">—</div><div class="l">Flex</div></div>
+        <div class="total-box"><div class="n" id="tot-colecta">—</div><div class="l">Colecta</div></div>
       </div>
-    </section>
-  </div>
+      <div class="reprint-actions">
+        <button onclick="cargarImpresas()">Actualizar</button>
+        <button onclick="reimprimirTanda('flex')">Reimprimir tanda Flex</button>
+        <button onclick="reimprimirTanda('colecta')">Reimprimir tanda Colecta</button>
+      </div>
+      <div class="status" id="status-reprint"></div>
+      <div id="list-impresas"></div>
+    </div>
+  </section>
+
+  <!-- ===================== VERIFICACIÓN ===================== -->
+  <section id="view-verificacion" class="view">
+    <div class="placeholder">
+      <h3>Verificación y conteo</h3>
+      <p>Acá va a ir el escaneo de etiqueta + producto con el lector, el contador<br>
+      regresivo de pendientes y el tablero del día. Lo construimos en el paso 3.</p>
+    </div>
+  </section>
+
+  <!-- ===================== CAMIONES ===================== -->
+  <section id="view-camiones" class="view">
+    <div class="placeholder">
+      <h3>Camiones y colectas</h3>
+      <p>Acá vas a ver las colectas del día que trae Mercado Libre (transportista, patente,<br>
+      horario) y vas a completar tipo de camión, teléfono, pallets y la puerta. Paso 2.</p>
+    </div>
+  </section>
 
   <footer>Las etiquetas salen ordenadas por SKU: todas las ventas del mismo producto quedan juntas.</footer>
 </div>
 
 <script>
   const API = "https://depositoml-backend-production.up.railway.app";
-
-  if (API.includes("TU-BACKEND")) document.getElementById("configWarn").style.display = "block";
-
-  const cache = {};   // guarda lo último que buscamos por tanda
+  const cache = {};
 
   function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+  function verTab(name, btn){
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-'+name).classList.add('active');
+  }
+
+  // ---------- Buscar pendientes ----------
   async function buscar(tipo){
     const st = document.getElementById("status-"+tipo);
     const cnt = document.getElementById("count-"+tipo);
@@ -155,30 +199,23 @@
     st.className = "status"; st.textContent = "Buscando envíos en Mercado Libre…";
     list.innerHTML = ""; print.disabled = true;
     cnt.className = "count empty"; cnt.querySelector(".num").textContent = "…";
-
     try{
       const r = await fetch(`${API}/api/despacho/pendientes?tipo=${tipo}`);
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || "No se pudo consultar");
       cache[tipo] = d;
-
       cnt.className = "count" + (d.cantidad ? "" : " empty");
       cnt.querySelector(".num").textContent = d.cantidad;
-
       if(d.cantidad){
         print.disabled = false;
         print.textContent = `Descargar etiquetas (${d.cantidad})`;
-        st.className = "status ok";
-        st.textContent = "Ordenadas por SKU, listas para imprimir.";
+        st.className = "status ok"; st.textContent = "Ordenadas por SKU, listas para imprimir.";
       } else {
-        st.className = "status";
-        st.textContent = "No hay envíos listos para despachar en esta tanda.";
+        st.className = "status"; st.textContent = "No hay envíos listos para despachar en esta tanda.";
       }
-
       renderLista(tipo, d);
     }catch(e){
-      st.className = "status err";
-      st.textContent = "Error: " + e.message;
+      st.className = "status err"; st.textContent = "Error: " + e.message;
       cnt.className = "count empty"; cnt.querySelector(".num").textContent = "—";
     }
   }
@@ -188,62 +225,105 @@
     let html = "";
     if(d.listos.length){
       html += `<div class="group-h">A imprimir · por SKU</div><div class="list">`;
-      for(const s of d.listos){
-        html += `<div class="row">
-          <span class="sku">${esc(s.sku) || "SIN SKU"}</span>
-          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
-          <span class="u">×${s.unidades||1}</span>
-        </div>`;
-      }
+      for(const s of d.listos)
+        html += `<div class="row"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="u">×${s.unidades||1}</span></div>`;
       html += `</div>`;
     }
     if(d.no_listos && d.no_listos.length){
       html += `<details><summary>${d.no_listos.length} envío(s) todavía no listos</summary><div class="list">`;
-      for(const s of d.no_listos){
-        html += `<div class="row">
-          <span class="sku">${esc(s.sku) || "SIN SKU"}</span>
-          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
-          <span class="pill">${esc(s.status)||"?"}</span>
-        </div>`;
-      }
+      for(const s of d.no_listos)
+        html += `<div class="row"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="pill">${esc(s.status)||"?"}</span></div>`;
       html += `</div></details>`;
     }
     list.innerHTML = html;
   }
 
+  // ---------- Descargar / reimprimir (devuelve PDF) ----------
+  async function bajarPdf(url, statusEl, defaultName){
+    const r = await fetch(url);
+    if(!r.ok){
+      let msg = "No se pudo generar el PDF";
+      try{ const e = await r.json(); msg = e.error || msg; }catch(_){}
+      throw new Error(msg);
+    }
+    const unidas = r.headers.get("X-Etiquetas-Unidas");
+    const fallidas = r.headers.get("X-Etiquetas-Fallidas");
+    const blob = await r.blob();
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = u; a.download = defaultName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u), 4000);
+    return { unidas, fallidas };
+  }
+
   async function imprimir(tipo){
     const st = document.getElementById("status-"+tipo);
     const print = document.getElementById("print-"+tipo);
-    const prevTxt = print.textContent;
+    const prev = print.textContent;
     print.disabled = true; print.textContent = "Generando PDF…";
-    st.className = "status"; st.textContent = "Pidiendo las etiquetas a Mercado Libre y armando el PDF…";
-
+    st.className = "status"; st.textContent = "Pidiendo etiquetas a Mercado Libre y armando el PDF…";
     try{
-      const r = await fetch(`${API}/api/despacho/etiquetas?tipo=${tipo}`);
-      if(!r.ok){
-        let msg = "No se pudo generar el PDF";
-        try{ const e = await r.json(); msg = e.error || msg; }catch(_){}
-        throw new Error(msg);
-      }
-      const unidas   = r.headers.get("X-Etiquetas-Unidas");
-      const fallidas = r.headers.get("X-Etiquetas-Fallidas");
-      const blob = await r.blob();
-      const url  = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `etiquetas_${tipo}_${new Date().toISOString().slice(0,10)}.pdf`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 4000);
-
+      const fecha = new Date().toISOString().slice(0,10);
+      const { unidas, fallidas } = await bajarPdf(`${API}/api/despacho/etiquetas?tipo=${tipo}`, st, `etiquetas_${tipo}_${fecha}.pdf`);
       st.className = "status ok";
-      st.textContent = `PDF listo: ${unidas||"?"} etiqueta(s)` + (fallidas && fallidas!=="0" ? ` · ${fallidas} no se pudieron unir` : "") + ".";
+      st.textContent = `PDF listo: ${unidas||"?"} etiqueta(s)` + (fallidas&&fallidas!=="0"?` · ${fallidas} no se unieron`:"") + ".";
+      cargarImpresas();
     }catch(e){
-      st.className = "status err";
-      st.textContent = "Error: " + e.message;
+      st.className = "status err"; st.textContent = "Error: " + e.message;
     }finally{
-      print.disabled = false; print.textContent = prevTxt;
+      print.disabled = false; print.textContent = prev;
     }
   }
+
+  // ---------- Impresas hoy ----------
+  async function cargarImpresas(){
+    const st = document.getElementById("status-reprint");
+    st.className = "status"; st.textContent = "Cargando lo impreso hoy…";
+    try{
+      const r = await fetch(`${API}/api/despacho/impresas`);
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || "No se pudo cargar");
+      document.getElementById("tot-total").textContent = d.total;
+      document.getElementById("tot-flex").textContent = d.total_flex;
+      document.getElementById("tot-colecta").textContent = d.total_colecta;
+      const list = document.getElementById("list-impresas");
+      if(!d.impresas.length){ list.innerHTML = `<div class="group-h">Todavía no imprimiste nada hoy.</div>`; st.textContent=""; return; }
+      let html = `<div class="group-h">Detalle · por SKU</div><div class="list">`;
+      for(const s of d.impresas)
+        html += `<div class="row"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)}</span></span>
+          <button class="mini" onclick="reimprimirUno('${esc(s.shipment_id)}')">Reimprimir</button></div>`;
+      html += `</div>`;
+      list.innerHTML = html;
+      st.textContent = "";
+    }catch(e){ st.className="status err"; st.textContent = "Error: " + e.message; }
+  }
+
+  async function reimprimirUno(id){
+    const st = document.getElementById("status-reprint");
+    st.className="status"; st.textContent = "Reimprimiendo…";
+    try{
+      const { unidas } = await bajarPdf(`${API}/api/despacho/reimprimir?ids=${id}`, st, `reimpresion_${id}.pdf`);
+      st.className="status ok"; st.textContent = `Reimpreso (${unidas||1}).`;
+    }catch(e){ st.className="status err"; st.textContent = "Error: " + e.message; }
+  }
+
+  async function reimprimirTanda(tipo){
+    const st = document.getElementById("status-reprint");
+    st.className="status"; st.textContent = `Reimprimiendo tanda ${tipo}…`;
+    try{
+      const fecha = new Date().toISOString().slice(0,10);
+      const { unidas, fallidas } = await bajarPdf(`${API}/api/despacho/reimprimir?tipo=${tipo}`, st, `reimpresion_${tipo}_${fecha}.pdf`);
+      st.className="status ok";
+      st.textContent = `Tanda ${tipo}: ${unidas||"?"} etiqueta(s)` + (fallidas&&fallidas!=="0"?` · ${fallidas} no se unieron`:"") + ".";
+    }catch(e){ st.className="status err"; st.textContent = "Error: " + e.message; }
+  }
+
+  // Cargar el contador al abrir
+  cargarImpresas();
 </script>
 </body>
 </html>
