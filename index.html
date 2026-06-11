@@ -130,6 +130,26 @@
   .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:40px 24px; text-align:center; color:var(--muted)}
   .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
   footer{margin-top:40px; color:var(--muted); font-size:12px; text-align:center}
+
+  /* Verificación / escaneo */
+  .scan-card{margin-top:16px; border-radius:14px; padding:22px 24px; color:#fff}
+  .scan-card .big{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+    text-transform:uppercase; letter-spacing:.03em; font-size:34px; line-height:1.05}
+  .scan-card .det{font-size:14px; margin-top:10px; opacity:.95}
+  .scan-card .det .mono{font-family:'JetBrains Mono',monospace}
+  .scan-ok{background:var(--ok)} .scan-cancel{background:var(--err)} .scan-warn{background:#B7791F}
+  .total-box .n.falta{color:var(--err)}
+  .row .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
+  .row.r4{grid-template-columns:auto 1fr auto auto}
+
+  /* Seguimiento */
+  .seg-sec{background:var(--panel); border:1px solid var(--line); border-radius:14px; margin-top:14px; overflow:hidden}
+  .seg-sec summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 18px}
+  .seg-sec summary::-webkit-details-marker{display:none}
+  .seg-sec .seg-dot{width:12px; height:12px; border-radius:50%}
+  .seg-sec .seg-tit{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:17px}
+  .seg-sec .seg-n{margin-left:auto; font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:24px}
+  .seg-sec .list{margin:0 18px 14px; border-top:1px solid var(--line)}
   /* Buscar venta */
   .buscar-wrap{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px}
   .buscar-wrap h2{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px}
@@ -182,6 +202,7 @@
     <button class="tab active" onclick="verTab('impresion', this)">Impresión</button>
     <button class="tab" onclick="verTab('buscar', this)">Buscar venta</button>
     <button class="tab" onclick="verTab('verificacion', this)">Verificación</button>
+    <button class="tab" onclick="verTab('seguimiento', this)">Seguimiento</button>
     <button class="tab" onclick="verTab('camiones', this)">Camiones</button>
   </div>
 
@@ -240,9 +261,38 @@
   </section>
 
   <section id="view-verificacion" class="view">
-    <div class="placeholder"><h3>Verificación y conteo</h3>
-      <p>Acá va el escaneo de etiqueta + producto con el lector, el contador<br>
-      regresivo de pendientes y el tablero del día. Lo construimos en el último paso.</p></div>
+    <div class="buscar-wrap">
+      <h2>Despacho · escaneá al cargar el camión</h2>
+      <p class="buscar-hint">Escaneá el QR de la etiqueta (o tipeá el número de venta o de envío) y dale Enter.
+      Antes de registrar, el sistema chequea <b>en vivo</b> en Mercado Libre que la venta no esté cancelada.</p>
+      <div class="buscar-row">
+        <input id="scan-input" placeholder="Escaneá acá…" autocomplete="off"
+               onkeydown="if(event.key==='Enter') escanear()">
+        <button onclick="escanear()" id="btn-scan">Despachar</button>
+      </div>
+      <div id="scan-result"></div>
+    </div>
+    <div class="reprint">
+      <h2>Camión de hoy</h2>
+      <div class="totals">
+        <div class="total-box"><div class="n" id="v-impresas">—</div><div class="l">Impresas</div></div>
+        <div class="total-box"><div class="n" id="v-despachadas">—</div><div class="l">Despachadas</div></div>
+        <div class="total-box"><div class="n falta" id="v-faltan">—</div><div class="l">Faltan subir</div></div>
+      </div>
+      <div class="reprint-actions"><button onclick="cargarDespachados()">Actualizar</button></div>
+      <div class="status" id="status-verif"></div>
+      <div id="list-faltan"></div>
+      <div id="list-despachadas"></div>
+    </div>
+  </section>
+
+  <section id="view-seguimiento" class="view">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px">
+      <h2 style="font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0">Flujo por etiqueta</h2>
+      <button style="width:auto; padding:10px 16px; background:var(--ink); color:#fff" onclick="cargarSeguimiento()">Actualizar tablero</button>
+    </div>
+    <div class="status" id="status-seg"></div>
+    <div id="seg-board"></div>
   </section>
 
   <section id="view-camiones" class="view">
@@ -358,6 +408,8 @@
     document.getElementById('view-'+name).classList.add('active');
     document.getElementById('codigo-banner').style.display =
       (name === 'verificacion' || name === 'camiones') ? 'block' : 'none';
+    if(name === 'verificacion'){ cargarDespachados(); setTimeout(()=>document.getElementById('scan-input').focus(), 50); }
+    if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
   }
 
   // ---------- Código de autorización ----------
@@ -436,14 +488,23 @@
     const list=document.getElementById("list-"+tipo); let html="";
     if(d.listos.length){
       html+=`<div class="group-h">A imprimir · por SKU</div><div class="list">`;
-      for(const s of d.listos) html+=`<div class="row"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="u">×${s.unidades||1}</span></div>`;
+      for(const s of d.listos) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
+        <span class="venta">${esc(s.nro_venta)||""}</span><span class="u">×${s.unidades||1}</span></div>`;
       html+=`</div>`;
+    }
+    if(d.programados && d.programados.length){
+      html+=`<details><summary>${d.programados.length} envío(s) programados para más adelante (no se imprimen)</summary><div class="list">`;
+      for(const s of d.programados) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
+        <span class="venta">${esc(s.nro_venta)||""}</span><span class="pill">despachar ${esc(s.limite)||"?"}</span></div>`;
+      html+=`</div></details>`;
     }
     if(d.no_listos && d.no_listos.length){
       html+=`<details><summary>${d.no_listos.length} envío(s) todavía no listos</summary><div class="list">`;
-      for(const s of d.no_listos) html+=`<div class="row"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="pill">${esc(s.status)||"?"}</span></div>`;
+      for(const s of d.no_listos) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
+        <span class="venta">${esc(s.nro_venta)||""}</span><span class="pill">${esc(s.status)||"?"}</span></div>`;
       html+=`</div></details>`;
     }
     list.innerHTML=html;
@@ -483,8 +544,9 @@
       const list=document.getElementById("list-impresas");
       if(!d.impresas.length){ list.innerHTML=`<div class="group-h">Todavía no imprimiste nada hoy.</div>`; st.textContent=""; return; }
       let html=`<div class="group-h">Detalle · por SKU</div><div class="list">`;
-      for(const s of d.impresas) html+=`<div class="row"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+      for(const s of d.impresas) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
         <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)}</span></span>
+        <span class="venta">${esc(s.nro_venta)||""}</span>
         <button class="mini" onclick="reimprimirUno('${esc(s.shipment_id)}')">Reimprimir</button></div>`;
       html+=`</div>`; list.innerHTML=html; st.textContent="";
     }catch(e){ st.className="status err"; st.textContent="Error: "+e.message; }
@@ -514,6 +576,130 @@
       input.value="";
     }catch(e){ st.className="status err"; st.textContent="Error: "+e.message; }
     finally{ btn.disabled=false; }
+  }
+
+  // ---------- Verificación: escaneo de despacho ----------
+  function beep(error){
+    try{
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value=error?180:900; g.gain.value=.25;
+      o.start();
+      setTimeout(()=>{ o.stop(); ctx.close(); }, error?600:130);
+    }catch(e){}
+  }
+  async function escanear(){
+    const input=document.getElementById('scan-input');
+    const codigo=(input.value||'').trim();
+    if(!codigo) return;
+    const out=document.getElementById('scan-result');
+    const btn=document.getElementById('btn-scan');
+    btn.disabled=true;
+    out.innerHTML=`<div class="status">Chequeando la venta en Mercado Libre…</div>`;
+    try{
+      const r=await authFetch(`${API}/api/despacho/despachar`,{
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo verificar');
+      if(d.resultado==='cancelada'){
+        beep(true);
+        out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">⛔ No despachar · cancelada</div>
+          <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
+          Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> — bajala del camión y apartala.</div></div>`;
+      } else if(d.resultado==='duplicada'){
+        beep(true);
+        out.innerHTML=`<div class="scan-card scan-warn"><div class="big">Ya estaba escaneada</div>
+          <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br>
+          Se escaneó el ${d.despachado_at?new Date(d.despachado_at).toLocaleString('es-AR'):'—'}${d.usuario?' por '+esc(d.usuario):''}.</div></div>`;
+      } else {
+        beep(false);
+        out.innerHTML=`<div class="scan-card scan-ok"><div class="big">✓ Despachada</div>
+          <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
+          Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> · ${esc(d.tipo)||''}${d.aviso?'<br>⚠ '+esc(d.aviso):''}</div></div>`;
+        cargarDespachados();
+      }
+    }catch(e){
+      beep(true);
+      out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">Error</div>
+        <div class="det">${esc(e.message)}</div></div>`;
+    }finally{ btn.disabled=false; input.value=''; input.focus(); }
+  }
+  async function cargarDespachados(){
+    const st=document.getElementById('status-verif');
+    st.className='status'; st.textContent='Cargando el tablero del día…';
+    try{
+      const r=await authFetch(`${API}/api/despacho/despachados`); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo cargar');
+      document.getElementById('v-impresas').textContent=d.impresas_hoy;
+      document.getElementById('v-despachadas').textContent=d.despachadas_hoy;
+      document.getElementById('v-faltan').textContent=d.faltan_cnt;
+      let html='';
+      if(d.faltan.length){
+        html+=`<div class="group-h">Impresas hoy que faltan subir al camión</div><div class="list">`;
+        for(const s of d.faltan) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span></span>
+          <span class="venta">${esc(s.nro_venta)||""}</span><span class="u"></span></div>`;
+        html+=`</div>`;
+      }
+      document.getElementById('list-faltan').innerHTML=html;
+      let html2='';
+      if(d.despachadas.length){
+        html2+=`<div class="group-h">Escaneadas hoy</div><div class="list">`;
+        for(const s of d.despachadas) html2+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.colecta_carrier?` <span class="pill">${esc(s.colecta_carrier)}${s.colecta_patente?' · '+esc(s.colecta_patente):''}</span>`:''}</span>
+          <span class="venta">${esc(s.nro_venta)||""}</span>
+          <span class="u">${new Date(s.despachado_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+        html2+=`</div>`;
+      }
+      document.getElementById('list-despachadas').innerHTML=html2;
+      st.textContent='';
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  // ---------- Seguimiento ----------
+  const SEG_ETAPAS=[
+    ['para_imprimir','Para imprimir','#6B675E'],
+    ['programados','Programados · despacho futuro','#B88207'],
+    ['en_preparacion','En preparación (impresas)','#1C6DD0'],
+    ['despachadas','Despachadas por depósito','#7048E8'],
+    ['en_camino','En camino','#0B7285'],
+    ['entregadas','Entregadas','#2F9E44'],
+    ['devoluciones','No entregadas / Devoluciones','#D63B2F']
+  ];
+  async function cargarSeguimiento(){
+    const st=document.getElementById('status-seg'), board=document.getElementById('seg-board');
+    st.className='status'; st.textContent='Armando el flujo (consulta cada envío en Mercado Libre, puede tardar)…';
+    try{
+      const r=await authFetch(`${API}/api/despacho/seguimiento`); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo cargar');
+      st.textContent=`Envíos de los últimos ${d.dias} días.`;
+      let html='';
+      for(const [key,titulo,color] of SEG_ETAPAS){
+        const filas=d.etapas[key]||[];
+        const abierto=(key==='devoluciones'&&filas.length)?' open':'';
+        html+=`<details class="seg-sec"${abierto}><summary>
+          <span class="seg-dot" style="background:${color}"></span>
+          <span class="seg-tit">${titulo}</span>
+          <span class="seg-n" style="color:${color}">${filas.length}</span></summary>`;
+        if(filas.length){
+          html+=`<div class="list">`;
+          for(const s of filas){
+            let extra='';
+            if(key==='programados') extra=`despachar ${esc(s.limite)||'?'}`;
+            else if(key==='despachadas') extra=s.despachado_at?new Date(s.despachado_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+            else if(key==='devoluciones') extra=esc(s.estado);
+            html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+              <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.colecta?` <span class="pill">${esc(s.colecta)}</span>`:''}</span>
+              <span class="venta">${esc(s.nro_venta)||""}</span>
+              <span class="u">${extra}</span></div>`;
+          }
+          html+=`</div>`;
+        }
+        html+=`</details>`;
+      }
+      board.innerHTML=html;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
   // ---------- Init: ¿hay sesión activa? ----------
