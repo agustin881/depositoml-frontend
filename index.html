@@ -110,6 +110,10 @@
   .total-box .l{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
   .reprint-actions{display:flex; gap:10px; flex-wrap:wrap; margin:14px 0}
   .reprint-actions button{width:auto; padding:10px 14px; font-size:14px; background:#F0EEE6; color:var(--ink)}
+  .reimp-venta{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 10px}
+  .reimp-venta input{flex:1; min-width:220px; padding:10px 12px; border:1px solid var(--line);
+    border-radius:9px; font-size:14px; font-family:'JetBrains Mono',monospace}
+  .reimp-venta button{width:auto; padding:10px 16px; font-size:14px; background:var(--ink); color:#fff}
 
   .colectas-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px}
   @media(max-width:720px){.colectas-grid{grid-template-columns:1fr}}
@@ -211,6 +215,11 @@
         <button onclick="cargarImpresas()">Actualizar</button>
         <button onclick="reimprimirTanda('flex')">Reimprimir tanda Flex</button>
         <button onclick="reimprimirTanda('colecta')">Reimprimir tanda Colecta</button>
+      </div>
+      <div class="reimp-venta">
+        <input id="reimp-venta-input" placeholder="N° de venta · ej. 2000016878691168"
+               autocomplete="off" onkeydown="if(event.key==='Enter') reimprimirVenta()">
+        <button onclick="reimprimirVenta()" id="btn-reimp-venta">Reimprimir esta venta</button>
       </div>
       <div class="status" id="status-reprint"></div><div id="list-impresas"></div>
     </div>
@@ -491,6 +500,20 @@
     try{ const {unidas,fallidas}=await bajarPdf(`${API}/api/despacho/reimprimir?tipo=${tipo}`, `reimpresion_${tipo}.pdf`);
       st.className="status ok"; st.textContent=`Tanda ${tipo}: ${unidas||"?"} etiqueta(s)`+(fallidas&&fallidas!=="0"?` · ${fallidas} no se unieron`:"")+".";
     }catch(e){ st.className="status err"; st.textContent="Error: "+e.message; }
+  }
+  async function reimprimirVenta(){
+    const input=document.getElementById("reimp-venta-input");
+    const venta=(input.value||"").trim().replace(/\s+/g,"");
+    const st=document.getElementById("status-reprint");
+    if(!venta){ st.className="status err"; st.textContent="Escribí el número de venta."; return; }
+    const btn=document.getElementById("btn-reimp-venta"); btn.disabled=true;
+    st.className="status"; st.textContent=`Buscando la venta ${venta} y generando la etiqueta…`;
+    try{
+      await bajarPdf(`${API}/api/despacho/reimprimir?venta=${encodeURIComponent(venta)}`, `reimpresion_venta_${venta}.pdf`);
+      st.className="status ok"; st.textContent=`Etiqueta de la venta ${venta} lista.`;
+      input.value="";
+    }catch(e){ st.className="status err"; st.textContent="Error: "+e.message; }
+    finally{ btn.disabled=false; }
   }
 
   // ---------- Init: ¿hay sesión activa? ----------
