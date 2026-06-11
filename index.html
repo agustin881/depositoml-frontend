@@ -126,6 +126,26 @@
   .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:40px 24px; text-align:center; color:var(--muted)}
   .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
   footer{margin-top:40px; color:var(--muted); font-size:12px; text-align:center}
+  /* Buscar venta */
+  .buscar-wrap{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px}
+  .buscar-wrap h2{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px}
+  .buscar-hint{color:var(--muted); font-size:14px; margin:0 0 16px}
+  .buscar-row{display:flex; gap:8px; flex-wrap:wrap}
+  .buscar-row input{flex:1; min-width:220px; padding:12px 14px; border:1px solid var(--line);
+    border-radius:9px; font-size:15px; letter-spacing:.02em}
+  .buscar-row button{width:auto; padding:12px 22px; background:var(--ink); color:#fff; border:none;
+    border-radius:9px; font-weight:600; cursor:pointer}
+  .rcard{margin-top:18px; border:1px solid var(--line); border-radius:14px; overflow:hidden}
+  .rstate{padding:14px 18px; font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+    text-transform:uppercase; letter-spacing:.04em; font-size:17px; color:#fff}
+  .rcard-verde .rstate{background:#2E7D52} .rcard-azul .rstate{background:#2B5FA8}
+  .rcard-ambar .rstate{background:#B7791F} .rcard-rojo .rstate{background:#B23A3A}
+  .rcard-gris .rstate{background:#6B675E}
+  .rgrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line)}
+  .rgrid div{background:var(--panel); padding:12px 16px; font-size:14px}
+  .rgrid span{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); margin-bottom:3px}
+  @media(max-width:560px){ .rgrid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -156,6 +176,7 @@
 
   <div class="tabs" role="tablist">
     <button class="tab active" onclick="verTab('impresion', this)">Impresión</button>
+    <button class="tab" onclick="verTab('buscar', this)">Buscar venta</button>
     <button class="tab" onclick="verTab('verificacion', this)">Verificación</button>
     <button class="tab" onclick="verTab('camiones', this)">Camiones</button>
   </div>
@@ -195,6 +216,20 @@
     </div>
   </section>
 
+  <section id="view-buscar" class="view">
+    <div class="buscar-wrap">
+      <h2>Buscar una venta</h2>
+      <p class="buscar-hint">Poné el número de venta (o escaneá el código de la etiqueta) para ver si se despachó y si llegó. Busca solo ese número, no carga todo el historial.</p>
+      <div class="buscar-row">
+        <input id="buscar-input" placeholder="Número de venta · ej. 2000016878691168"
+               autocomplete="off" onkeydown="if(event.key==='Enter') buscarVenta()">
+        <button onclick="buscarVenta()">Buscar</button>
+      </div>
+      <div class="status" id="status-buscar"></div>
+      <div id="buscar-resultado"></div>
+    </div>
+  </section>
+
   <section id="view-verificacion" class="view">
     <div class="placeholder"><h3>Verificación y conteo</h3>
       <p>Acá va el escaneo de etiqueta + producto con el lector, el contador<br>
@@ -228,6 +263,46 @@
   let codigoActual = null;
 
   function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ---------- Buscar venta ----------
+  async function buscarVenta(){
+    const venta = (document.getElementById('buscar-input').value || '').trim();
+    const st  = document.getElementById('status-buscar');
+    const out = document.getElementById('buscar-resultado');
+    out.innerHTML = '';
+    if(!venta){ st.textContent = 'Escribí un número de venta.'; return; }
+    st.textContent = 'Buscando…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/buscar?venta=${encodeURIComponent(venta)}`);
+      const d = await r.json();
+      if(!r.ok){ st.textContent = d.error || 'No se pudo buscar.'; return; }
+      st.textContent = '';
+      renderResultado(d);
+    }catch(e){ st.textContent = e.message || 'Error al buscar.'; }
+  }
+  function renderResultado(d){
+    let tono = 'gris';
+    if(d.entregado) tono = 'verde';
+    else if(d.despachado) tono = 'azul';
+    else if(d.estado_codigo === 'ready_to_ship') tono = 'ambar';
+    else if(['cancelled','not_delivered','returned'].includes(d.estado_codigo)) tono = 'rojo';
+    const fecha = d.fecha ? new Date(d.fecha).toLocaleDateString('es-AR') : '—';
+    const impreso = d.impreso
+      ? 'Sí' + (d.impreso_at ? ' · ' + new Date(d.impreso_at).toLocaleString('es-AR') : '')
+      : 'No se imprimió desde el sistema';
+    document.getElementById('buscar-resultado').innerHTML = `
+      <div class="rcard rcard-${tono}">
+        <div class="rstate">${esc(d.estado)}</div>
+        <div class="rgrid">
+          <div><span>Venta</span>${esc(d.nro_venta)}</div>
+          <div><span>SKU</span>${esc(d.sku || '—')}</div>
+          <div><span>Producto</span>${esc(d.titulo || '—')}</div>
+          <div><span>Comprador</span>${esc(d.comprador || '—')}</div>
+          <div><span>Fecha de venta</span>${fecha}</div>
+          <div><span>Impreso en depósito</span>${impreso}</div>
+        </div>
+      </div>`;
+  }
 
   // ---------- Sesión ----------
   async function token(){
