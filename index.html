@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depósito · Despacho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bone:#F4F2EC; --ink:#1B1B1A; --panel:#FFFFFF;
+    --line:#E1DDD2; --muted:#7A766C;
+    --flex:#1C6DD0; --colecta:#E8590C;
+    --ok:#2F9E44; --warn:#B88207; --err:#D63B2F;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bone); color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif; line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 64px}
+  header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px}
+  header.top h1{
+    font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+    letter-spacing:.02em; text-transform:uppercase; font-size:34px; margin:0;
+  }
+  .tagline{color:var(--muted); font-size:14px}
+  .config-warn{
+    margin:14px 0 0; padding:12px 14px; border:1px solid var(--warn);
+    background:#FFF8E8; border-radius:8px; font-size:13.5px; color:#5C4708;
+  }
+  .config-warn code{font-family:'JetBrains Mono',monospace; background:#0001; padding:1px 5px; border-radius:4px}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:24px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:0; overflow:hidden; display:flex; flex-direction:column;
+  }
+  .panel .bar{height:6px}
+  .panel[data-t="flex"] .bar{background:var(--flex)}
+  .panel[data-t="colecta"] .bar{background:var(--colecta)}
+  .panel .body{padding:20px 20px 22px}
+
+  .panel h2{
+    font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+    text-transform:uppercase; letter-spacing:.04em; font-size:22px; margin:0 0 2px;
+  }
+  .panel .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
+
+  .count{display:flex; align-items:flex-end; gap:10px; margin:6px 0 16px; min-height:58px}
+  .count .num{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:52px; line-height:.9}
+  .count .lbl{color:var(--muted); font-size:13px; padding-bottom:6px}
+  .count.empty .num{color:var(--line)}
+
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:15px;
+    border:none; border-radius:9px; padding:12px 16px; cursor:pointer;
+    width:100%; transition:transform .04s ease, background .15s ease;
+  }
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid #1C6DD055; outline-offset:2px}
+  button:disabled{cursor:not-allowed; opacity:.45}
+  .btn-find{background:var(--ink); color:#fff; margin-bottom:10px}
+  .btn-print{color:#fff}
+  .panel[data-t="flex"] .btn-print{background:var(--flex)}
+  .panel[data-t="colecta"] .btn-print{background:var(--colecta)}
+
+  .status{font-size:13px; margin-top:10px; min-height:18px}
+  .status.err{color:var(--err)}
+  .status.ok{color:var(--ok)}
+
+  .list{margin-top:16px; border-top:1px solid var(--line)}
+  .row{
+    display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+    padding:8px 2px; border-bottom:1px solid var(--line); font-size:13px;
+  }
+  .row .sku{font-family:'JetBrains Mono',monospace; font-weight:500; color:var(--ink)}
+  .row .ti{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row .u{color:var(--muted); font-size:12px}
+  .group-h{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+    margin:16px 0 4px; font-weight:600;
+  }
+  details{margin-top:14px}
+  details summary{cursor:pointer; font-size:13px; color:var(--warn); font-weight:600}
+  .pill{
+    font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px;
+    border-radius:20px; background:#F0EEE6; color:var(--muted);
+  }
+  footer{margin-top:40px; color:var(--muted); font-size:12px; text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Despacho</h1>
+    <span class="tagline">Etiquetas del día, ordenadas por SKU para pickear de una.</span>
+  </header>
+  <div id="configWarn" class="config-warn" style="display:none">
+    Falta configurar la dirección del backend. Abrí este archivo y reemplazá
+    <code>https://TU-BACKEND.up.railway.app</code> por la URL de tu servicio en Railway.
+  </div>
+
+  <div class="grid">
+    <!-- FLEX -->
+    <section class="panel" data-t="flex">
+      <div class="bar"></div>
+      <div class="body">
+        <h2>Flex</h2>
+        <div class="sub">Envíos self-service · logística propia</div>
+        <div class="count empty" id="count-flex"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
+        <button class="btn-find" onclick="buscar('flex')">Buscar pendientes</button>
+        <button class="btn-print" id="print-flex" onclick="imprimir('flex')" disabled>Descargar etiquetas</button>
+        <div class="status" id="status-flex"></div>
+        <div id="list-flex"></div>
+      </div>
+    </section>
+
+    <!-- COLECTA -->
+    <section class="panel" data-t="colecta">
+      <div class="bar"></div>
+      <div class="body">
+        <h2>Colecta</h2>
+        <div class="sub">Envíos cross-docking · los retira Mercado Libre</div>
+        <div class="count empty" id="count-colecta"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
+        <button class="btn-find" onclick="buscar('colecta')">Buscar pendientes</button>
+        <button class="btn-print" id="print-colecta" onclick="imprimir('colecta')" disabled>Descargar etiquetas</button>
+        <div class="status" id="status-colecta"></div>
+        <div id="list-colecta"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Las etiquetas salen ordenadas por SKU: todas las ventas del mismo producto quedan juntas.</footer>
+</div>
+
+<script>
+  const API = "https://depositoml-backend-production.up.railway.app";
+
+  if (API.includes("TU-BACKEND")) document.getElementById("configWarn").style.display = "block";
+
+  const cache = {};   // guarda lo último que buscamos por tanda
+
+  function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  async function buscar(tipo){
+    const st = document.getElementById("status-"+tipo);
+    const cnt = document.getElementById("count-"+tipo);
+    const list = document.getElementById("list-"+tipo);
+    const print = document.getElementById("print-"+tipo);
+    st.className = "status"; st.textContent = "Buscando envíos en Mercado Libre…";
+    list.innerHTML = ""; print.disabled = true;
+    cnt.className = "count empty"; cnt.querySelector(".num").textContent = "…";
+
+    try{
+      const r = await fetch(`${API}/api/despacho/pendientes?tipo=${tipo}`);
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || "No se pudo consultar");
+      cache[tipo] = d;
+
+      cnt.className = "count" + (d.cantidad ? "" : " empty");
+      cnt.querySelector(".num").textContent = d.cantidad;
+
+      if(d.cantidad){
+        print.disabled = false;
+        print.textContent = `Descargar etiquetas (${d.cantidad})`;
+        st.className = "status ok";
+        st.textContent = "Ordenadas por SKU, listas para imprimir.";
+      } else {
+        st.className = "status";
+        st.textContent = "No hay envíos listos para despachar en esta tanda.";
+      }
+
+      renderLista(tipo, d);
+    }catch(e){
+      st.className = "status err";
+      st.textContent = "Error: " + e.message;
+      cnt.className = "count empty"; cnt.querySelector(".num").textContent = "—";
+    }
+  }
+
+  function renderLista(tipo, d){
+    const list = document.getElementById("list-"+tipo);
+    let html = "";
+    if(d.listos.length){
+      html += `<div class="group-h">A imprimir · por SKU</div><div class="list">`;
+      for(const s of d.listos){
+        html += `<div class="row">
+          <span class="sku">${esc(s.sku) || "SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
+          <span class="u">×${s.unidades||1}</span>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    if(d.no_listos && d.no_listos.length){
+      html += `<details><summary>${d.no_listos.length} envío(s) todavía no listos</summary><div class="list">`;
+      for(const s of d.no_listos){
+        html += `<div class="row">
+          <span class="sku">${esc(s.sku) || "SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
+          <span class="pill">${esc(s.status)||"?"}</span>
+        </div>`;
+      }
+      html += `</div></details>`;
+    }
+    list.innerHTML = html;
+  }
+
+  async function imprimir(tipo){
+    const st = document.getElementById("status-"+tipo);
+    const print = document.getElementById("print-"+tipo);
+    const prevTxt = print.textContent;
+    print.disabled = true; print.textContent = "Generando PDF…";
+    st.className = "status"; st.textContent = "Pidiendo las etiquetas a Mercado Libre y armando el PDF…";
+
+    try{
+      const r = await fetch(`${API}/api/despacho/etiquetas?tipo=${tipo}`);
+      if(!r.ok){
+        let msg = "No se pudo generar el PDF";
+        try{ const e = await r.json(); msg = e.error || msg; }catch(_){}
+        throw new Error(msg);
+      }
+      const unidas   = r.headers.get("X-Etiquetas-Unidas");
+      const fallidas = r.headers.get("X-Etiquetas-Fallidas");
+      const blob = await r.blob();
+      const url  = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `etiquetas_${tipo}_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+
+      st.className = "status ok";
+      st.textContent = `PDF listo: ${unidas||"?"} etiqueta(s)` + (fallidas && fallidas!=="0" ? ` · ${fallidas} no se pudieron unir` : "") + ".";
+    }catch(e){
+      st.className = "status err";
+      st.textContent = "Error: " + e.message;
+    }finally{
+      print.disabled = false; print.textContent = prevTxt;
+    }
+  }
+</script>
+</body>
+</html>
