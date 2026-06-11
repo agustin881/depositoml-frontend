@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bone:#F4F2EC; --ink:#1B1B1A; --panel:#FFFFFF;
@@ -18,27 +19,44 @@
   body{margin:0; background:var(--bone); color:var(--ink);
     font-family:'Inter',system-ui,sans-serif; line-height:1.45; -webkit-font-smoothing:antialiased}
   .wrap{max-width:1040px; margin:0 auto; padding:24px 20px 64px}
+
+  /* Login */
+  #login{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:32px; width:100%; max-width:360px}
+  .card .bar{height:6px; background:var(--colecta); border-radius:4px; margin-bottom:20px}
+  .card h1{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
+    letter-spacing:.03em; font-size:30px; margin:0 0 4px}
+  .card .sub{color:var(--muted); font-size:13px; margin-bottom:22px}
+  .card label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    font-weight:600; margin:12px 0 5px}
+  .card input{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:9px; font-size:15px;
+    font-family:'Inter',sans-serif}
+  .card button{width:100%; margin-top:20px; padding:13px; background:var(--ink); color:#fff; border:none;
+    border-radius:9px; font-weight:600; font-size:15px; cursor:pointer}
+  .card button:disabled{opacity:.5; cursor:not-allowed}
+  .card .err{color:var(--err); font-size:13px; margin-top:12px; min-height:16px}
+  .card .cfg{color:var(--warn); font-size:13px; margin-top:14px}
+
   header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:18px}
   header.top h1{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
     letter-spacing:.02em; text-transform:uppercase; font-size:32px; margin:0}
   .tagline{color:var(--muted); font-size:14px}
+  .salir{margin-left:auto; width:auto; padding:8px 14px; background:none; border:1px solid var(--line);
+    border-radius:8px; font-size:13px; color:var(--muted); cursor:pointer}
 
   .tabs{display:flex; gap:4px; border-bottom:2px solid var(--line); margin-bottom:20px}
   .tab{font-family:'Barlow Semi Condensed',sans-serif; font-weight:600; text-transform:uppercase;
     letter-spacing:.03em; font-size:16px; background:none; border:none; cursor:pointer;
     padding:10px 16px; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-2px; width:auto}
   .tab.active{color:var(--ink); border-bottom-color:var(--ink)}
-  .tab:focus-visible{outline:3px solid #1C6DD055; outline-offset:2px}
   .view{display:none} .view.active{display:block}
 
-  /* Banner código de autorización */
   #codigo-banner{display:none; margin-bottom:22px; border-radius:14px; overflow:hidden;
     border:1px solid var(--line); background:var(--panel)}
   #codigo-banner .cb-bar{height:6px; background:var(--colecta)}
   #codigo-banner .cb-body{padding:16px 20px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
   .cb-label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600}
   .cb-code{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:34px; letter-spacing:.06em}
-  .cb-date{font-size:12px; color:var(--muted)}
   .cb-old{color:var(--err); font-weight:600}
   #codigo-banner input{font-family:'JetBrains Mono',monospace; font-size:18px; text-transform:uppercase;
     padding:10px 12px; border:1px solid var(--line); border-radius:9px; width:160px; letter-spacing:.05em}
@@ -48,9 +66,7 @@
 
   .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
   @media(max-width:720px){.grid{grid-template-columns:1fr}}
-
-  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    overflow:hidden; display:flex; flex-direction:column}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column}
   .panel .bar{height:6px}
   .panel[data-t="flex"] .bar{background:var(--flex)}
   .panel[data-t="colecta"] .bar{background:var(--colecta)}
@@ -58,7 +74,6 @@
   .panel h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
     letter-spacing:.04em; font-size:22px; margin:0 0 2px}
   .panel .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
-
   .count{display:flex; align-items:flex-end; gap:10px; margin:6px 0 16px; min-height:58px}
   .count .num{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:52px; line-height:.9}
   .count .lbl{color:var(--muted); font-size:13px; padding-bottom:6px}
@@ -73,7 +88,6 @@
   .btn-print{color:#fff}
   .panel[data-t="flex"] .btn-print{background:var(--flex)}
   .panel[data-t="colecta"] .btn-print{background:var(--colecta)}
-
   .status{font-size:13px; margin-top:10px; min-height:18px}
   .status.err{color:var(--err)} .status.ok{color:var(--ok)}
 
@@ -84,23 +98,19 @@
   .row .ti{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .row .u{color:var(--muted); font-size:12px}
   .row .mini{font-size:12px; padding:6px 10px; width:auto; background:#F0EEE6; color:var(--ink); border-radius:7px}
-  .group-h{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
-    margin:16px 0 4px; font-weight:600}
+  .group-h{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:16px 0 4px; font-weight:600}
   details{margin-top:14px}
   details summary{cursor:pointer; font-size:13px; color:var(--warn); font-weight:600}
-  .pill{font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px; border-radius:20px;
-    background:#F0EEE6; color:var(--muted)}
+  .pill{font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px; border-radius:20px; background:#F0EEE6; color:var(--muted)}
 
   .reprint{margin-top:22px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px}
-  .reprint h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
-    letter-spacing:.04em; font-size:22px; margin:0 0 14px}
+  .reprint h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:22px; margin:0 0 14px}
   .totals{display:flex; gap:24px; flex-wrap:wrap; margin-bottom:8px}
   .total-box .n{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:38px; line-height:1}
   .total-box .l{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
   .reprint-actions{display:flex; gap:10px; flex-wrap:wrap; margin:14px 0}
   .reprint-actions button{width:auto; padding:10px 14px; font-size:14px; background:#F0EEE6; color:var(--ink)}
 
-  /* Colectas del día */
   .colectas-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px}
   @media(max-width:720px){.colectas-grid{grid-template-columns:1fr}}
   .ccard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; border-left:5px solid var(--colecta)}
@@ -113,19 +123,35 @@
   .ccard .pat{font-family:'JetBrains Mono',monospace; font-weight:700}
   .ccard .solohoy{font-size:11px; color:var(--warn); font-weight:600}
 
-  .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px;
-    padding:40px 24px; text-align:center; color:var(--muted)}
-  .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase;
-    letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
-
+  .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:40px 24px; text-align:center; color:var(--muted)}
+  .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
   footer{margin-top:40px; color:var(--muted); font-size:12px; text-align:center}
 </style>
 </head>
 <body>
-<div class="wrap">
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <div class="card">
+    <div class="bar"></div>
+    <h1>Despacho</h1>
+    <div class="sub">Ingresá con tu usuario del depósito.</div>
+    <label for="email">Usuario (email)</label>
+    <input id="email" type="email" autocomplete="username" placeholder="usuario@pontec.com">
+    <label for="pass">Contraseña</label>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button id="btn-login" onclick="entrar()">Entrar</button>
+    <div class="err" id="login-err"></div>
+    <div class="cfg" id="login-cfg" style="display:none">Falta configurar Supabase en este archivo (URL y anon key).</div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app" class="wrap" style="display:none">
   <header class="top">
     <h1>Despacho</h1>
     <span class="tagline">Imprimí por SKU, reimprimí lo del día y mirá las colectas que vienen.</span>
+    <button class="salir" onclick="salir()">Salir</button>
   </header>
 
   <div class="tabs" role="tablist">
@@ -134,38 +160,25 @@
     <button class="tab" onclick="verTab('camiones', this)">Camiones</button>
   </div>
 
-  <!-- Banner código de autorización (se muestra en Verificación y Camiones) -->
   <div id="codigo-banner"><div class="cb-bar"></div><div class="cb-body" id="cb-body"></div></div>
 
-  <!-- ===================== IMPRESIÓN ===================== -->
   <section id="view-impresion" class="view active">
     <div class="grid">
-      <section class="panel" data-t="flex">
-        <div class="bar"></div>
-        <div class="body">
-          <h2>Flex</h2>
-          <div class="sub">Self-service · logística propia</div>
-          <div class="count empty" id="count-flex"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
-          <button class="btn-find" onclick="buscar('flex')">Buscar pendientes</button>
-          <button class="btn-print" id="print-flex" onclick="imprimir('flex')" disabled>Descargar etiquetas</button>
-          <div class="status" id="status-flex"></div>
-          <div id="list-flex"></div>
-        </div>
-      </section>
-      <section class="panel" data-t="colecta">
-        <div class="bar"></div>
-        <div class="body">
-          <h2>Colecta</h2>
-          <div class="sub">Cross-docking · lo retira Mercado Libre</div>
-          <div class="count empty" id="count-colecta"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
-          <button class="btn-find" onclick="buscar('colecta')">Buscar pendientes</button>
-          <button class="btn-print" id="print-colecta" onclick="imprimir('colecta')" disabled>Descargar etiquetas</button>
-          <div class="status" id="status-colecta"></div>
-          <div id="list-colecta"></div>
-        </div>
-      </section>
+      <section class="panel" data-t="flex"><div class="bar"></div><div class="body">
+        <h2>Flex</h2><div class="sub">Self-service · logística propia</div>
+        <div class="count empty" id="count-flex"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
+        <button class="btn-find" onclick="buscar('flex')">Buscar pendientes</button>
+        <button class="btn-print" id="print-flex" onclick="imprimir('flex')" disabled>Descargar etiquetas</button>
+        <div class="status" id="status-flex"></div><div id="list-flex"></div>
+      </div></section>
+      <section class="panel" data-t="colecta"><div class="bar"></div><div class="body">
+        <h2>Colecta</h2><div class="sub">Cross-docking · lo retira Mercado Libre</div>
+        <div class="count empty" id="count-colecta"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
+        <button class="btn-find" onclick="buscar('colecta')">Buscar pendientes</button>
+        <button class="btn-print" id="print-colecta" onclick="imprimir('colecta')" disabled>Descargar etiquetas</button>
+        <div class="status" id="status-colecta"></div><div id="list-colecta"></div>
+      </div></section>
     </div>
-
     <div class="reprint">
       <h2>Impresas hoy</h2>
       <div class="totals">
@@ -178,33 +191,25 @@
         <button onclick="reimprimirTanda('flex')">Reimprimir tanda Flex</button>
         <button onclick="reimprimirTanda('colecta')">Reimprimir tanda Colecta</button>
       </div>
-      <div class="status" id="status-reprint"></div>
-      <div id="list-impresas"></div>
+      <div class="status" id="status-reprint"></div><div id="list-impresas"></div>
     </div>
   </section>
 
-  <!-- ===================== VERIFICACIÓN ===================== -->
   <section id="view-verificacion" class="view">
-    <div class="placeholder">
-      <h3>Verificación y conteo</h3>
+    <div class="placeholder"><h3>Verificación y conteo</h3>
       <p>Acá va el escaneo de etiqueta + producto con el lector, el contador<br>
-      regresivo de pendientes y el tablero del día. Lo construimos en el último paso.</p>
-    </div>
+      regresivo de pendientes y el tablero del día. Lo construimos en el último paso.</p></div>
   </section>
 
-  <!-- ===================== CAMIONES ===================== -->
   <section id="view-camiones" class="view">
     <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px">
       <h2 style="font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0">Colectas de hoy</h2>
       <button style="width:auto; padding:10px 16px; background:var(--ink); color:#fff" onclick="cargarColectas()">Cargar colectas</button>
     </div>
-    <div class="status" id="status-colectas"></div>
-    <div id="colectas-list"></div>
-    <div class="placeholder" style="margin-top:18px">
-      <h3>Registro de camiones</h3>
+    <div class="status" id="status-colectas"></div><div id="colectas-list"></div>
+    <div class="placeholder" style="margin-top:18px"><h3>Registro de camiones</h3>
       <p>El próximo paso: completar tipo de camión, teléfono, pallets y la puerta<br>
-      (foto + medidas), y guardar el historial por patente.</p>
-    </div>
+      (foto + medidas), y guardar el historial por patente.</p></div>
   </section>
 
   <footer>Las etiquetas salen ordenadas por SKU: todas las ventas del mismo producto quedan juntas.</footer>
@@ -212,28 +217,70 @@
 
 <script>
   const API = "https://depositoml-backend-production.up.railway.app";
+
+  // ⬇⬇⬇  CONFIGURAR MAÑANA con los datos de Supabase (Project Settings → API)  ⬇⬇⬇
+  const SUPABASE_URL      = "https://TU-PROYECTO.supabase.co";
+  const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+  // ⬆⬆⬆  La anon key es pública, es seguro ponerla acá  ⬆⬆⬆
+
+  const configurado = !SUPABASE_URL.includes("TU-PROYECTO") && !SUPABASE_ANON_KEY.includes("TU_ANON_KEY");
+  const sb = configurado ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
   const cache = {};
   let codigoActual = null;
 
   function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ---------- Sesión ----------
+  async function token(){
+    if(!sb) return null;
+    const { data } = await sb.auth.getSession();
+    return data.session ? data.session.access_token : null;
+  }
+  async function authFetch(url, opts={}){
+    const t = await token();
+    opts.headers = Object.assign({}, opts.headers||{}, t ? { Authorization: 'Bearer ' + t } : {});
+    const r = await fetch(url, opts);
+    if(r.status === 401){ mostrarLogin(); throw new Error('Tu sesión venció, volvé a entrar'); }
+    return r;
+  }
+  async function entrar(){
+    const err = document.getElementById('login-err');
+    if(!configurado){ document.getElementById('login-cfg').style.display='block'; return; }
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('pass').value;
+    const btn = document.getElementById('btn-login');
+    err.textContent=''; btn.disabled=true; btn.textContent='Entrando…';
+    try{
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if(error) throw error;
+      mostrarApp();
+    }catch(e){ err.textContent = 'No se pudo entrar: ' + (e.message || 'revisá usuario y contraseña'); }
+    finally{ btn.disabled=false; btn.textContent='Entrar'; }
+  }
+  function mostrarApp(){
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    cargarImpresas(); cargarCodigo();
+  }
+  function mostrarLogin(){
+    document.getElementById('app').style.display='none';
+    document.getElementById('login').style.display='flex';
+  }
+  async function salir(){ if(sb) await sb.auth.signOut(); mostrarLogin(); }
 
   function verTab(name, btn){
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-'+name).classList.add('active');
-    // El código se muestra en Verificación y Camiones
     document.getElementById('codigo-banner').style.display =
       (name === 'verificacion' || name === 'camiones') ? 'block' : 'none';
   }
 
   // ---------- Código de autorización ----------
   async function cargarCodigo(){
-    try{
-      const r = await fetch(`${API}/api/despacho/codigo`);
-      const d = await r.json();
-      codigoActual = d.codigo ? d : null;
-    }catch(e){ codigoActual = null; }
+    try{ const r = await authFetch(`${API}/api/despacho/codigo`); const d = await r.json();
+      codigoActual = d.codigo ? d : null; }catch(e){ codigoActual = null; }
     renderCodigo();
   }
   function renderCodigo(editar){
@@ -246,33 +293,29 @@
       const aviso = (codigoActual && !codigoActual.es_de_hoy)
         ? `<div class="cb-old">El código guardado es del ${esc(codigoActual.fecha)}. Cargá el de hoy.</div>` : '';
       box.innerHTML = `<div><div class="cb-label">Código de autorización del día</div>${aviso}</div>
-        <input id="cb-input" maxlength="20" placeholder="Ej. 16BE990F" value="">
+        <input id="cb-input" maxlength="20" placeholder="Ej. 16BE990F">
         <button onclick="guardarCodigo()">Guardar</button>`;
     }
   }
   async function guardarCodigo(){
     const val = (document.getElementById('cb-input').value || '').trim().toUpperCase();
     if(!val) return;
-    const box = document.getElementById('cb-body');
-    box.querySelector('button').disabled = true;
+    const box = document.getElementById('cb-body'); box.querySelector('button').disabled = true;
     try{
-      const r = await fetch(`${API}/api/despacho/codigo`, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ codigo: val })
-      });
+      const r = await authFetch(`${API}/api/despacho/codigo`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ codigo: val }) });
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo guardar');
       codigoActual = d; renderCodigo();
     }catch(e){ alert('Error: ' + e.message); box.querySelector('button').disabled = false; }
   }
 
-  // ---------- Colectas de hoy ----------
+  // ---------- Colectas ----------
   async function cargarColectas(){
-    const st = document.getElementById('status-colectas');
-    const list = document.getElementById('colectas-list');
+    const st = document.getElementById('status-colectas'), list = document.getElementById('colectas-list');
     st.className='status'; st.textContent='Consultando las colectas del día en Mercado Libre…'; list.innerHTML='';
     try{
-      const r = await fetch(`${API}/api/despacho/colectas`);
-      const d = await r.json();
+      const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
       if(!d.colectas.length){ st.textContent='No hay colectas programadas para hoy (o ML no las expone por API).'; return; }
       st.textContent='';
@@ -283,11 +326,9 @@
           <div class="field"><b>Transportista:</b> ${esc(c.carrier)||'—'}</div>
           <div class="field"><b>Chofer:</b> ${esc(c.chofer)||'—'}</div>
           <div class="field"><b>Patente:</b> <span class="pat">${esc(c.patente)||'—'}</span> ${c.solo_hoy?'<span class="solohoy">(solo hoy)</span>':''}</div>
-          <div class="field"><b>Vehículo:</b> ${esc(c.vehiculo)||'—'}</div>
-        </div>`;
+          <div class="field"><b>Vehículo:</b> ${esc(c.vehiculo)||'—'}</div></div>`;
       }
-      html += `</div>`;
-      list.innerHTML = html;
+      html += `</div>`; list.innerHTML = html;
     }catch(e){ st.className='status err'; st.textContent='Error: ' + e.message; }
   }
 
@@ -298,11 +339,9 @@
     st.className="status"; st.textContent="Buscando envíos en Mercado Libre…";
     list.innerHTML=""; print.disabled=true; cnt.className="count empty"; cnt.querySelector(".num").textContent="…";
     try{
-      const r = await fetch(`${API}/api/despacho/pendientes?tipo=${tipo}`);
-      const d = await r.json();
+      const r = await authFetch(`${API}/api/despacho/pendientes?tipo=${tipo}`); const d = await r.json();
       if(!r.ok) throw new Error(d.error || "No se pudo consultar");
-      cache[tipo]=d;
-      cnt.className="count"+(d.cantidad?"":" empty"); cnt.querySelector(".num").textContent=d.cantidad;
+      cache[tipo]=d; cnt.className="count"+(d.cantidad?"":" empty"); cnt.querySelector(".num").textContent=d.cantidad;
       if(d.cantidad){ print.disabled=false; print.textContent=`Descargar etiquetas (${d.cantidad})`;
         st.className="status ok"; st.textContent="Ordenadas por SKU, listas para imprimir."; }
       else { st.className="status"; st.textContent="No hay envíos listos para despachar en esta tanda."; }
@@ -327,9 +366,9 @@
     list.innerHTML=html;
   }
 
-  // ---------- PDF helpers ----------
+  // ---------- PDF ----------
   async function bajarPdf(url, defaultName){
-    const r = await fetch(url);
+    const r = await authFetch(url);
     if(!r.ok){ let msg="No se pudo generar el PDF"; try{ const e=await r.json(); msg=e.error||msg; }catch(_){}
       throw new Error(msg); }
     const unidas=r.headers.get("X-Etiquetas-Unidas"), fallidas=r.headers.get("X-Etiquetas-Fallidas");
@@ -353,7 +392,7 @@
     const st=document.getElementById("status-reprint");
     st.className="status"; st.textContent="Cargando lo impreso hoy…";
     try{
-      const r=await fetch(`${API}/api/despacho/impresas`); const d=await r.json();
+      const r=await authFetch(`${API}/api/despacho/impresas`); const d=await r.json();
       if(!r.ok) throw new Error(d.error||"No se pudo cargar");
       document.getElementById("tot-total").textContent=d.total;
       document.getElementById("tot-flex").textContent=d.total_flex;
@@ -380,9 +419,13 @@
     }catch(e){ st.className="status err"; st.textContent="Error: "+e.message; }
   }
 
-  // Init
-  cargarImpresas();
-  cargarCodigo();
+  // ---------- Init: ¿hay sesión activa? ----------
+  (async function(){
+    document.getElementById('pass').addEventListener('keydown', e => { if(e.key==='Enter') entrar(); });
+    if(!configurado){ document.getElementById('login-cfg').style.display='block'; return; }
+    const t = await token();
+    if(t) mostrarApp(); else mostrarLogin();
+  })();
 </script>
 </body>
 </html>
