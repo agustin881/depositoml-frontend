@@ -109,6 +109,23 @@
   .total-box .n{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:38px; line-height:1}
   .total-box .l{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
   .reprint-actions{display:flex; gap:10px; flex-wrap:wrap; margin:14px 0}
+  /* Panel vivo */
+  .vivo-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+  .vivo-estado{font-size:13px; color:var(--muted)}
+  .vivo-estado .vivo-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ok); margin-right:6px; vertical-align:middle}
+  .vivo-refresh{width:auto; padding:8px 14px; font-size:13px; background:#F0EEE6; color:var(--ink)}
+  .panel-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+  .btn-sel{background:#F0EEE6; color:var(--ink)}
+  .lista-sel{margin-top:12px; max-height:340px; overflow:auto}
+  .lista-sel .selrow{display:grid; grid-template-columns:auto auto 1fr auto auto; gap:10px; align-items:center;
+    padding:7px 4px; border-bottom:1px solid var(--line); font-size:13px}
+  .lista-sel .selrow input[type=checkbox]{width:17px; height:17px; cursor:pointer}
+  .lista-sel .selrow .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
+  .lista-sel .selrow .ti{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lista-sel .selrow .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
+  .lista-sel .selrow .u{color:var(--muted)}
+  .lista-sel .selhead{display:flex; align-items:center; gap:8px; padding:6px 4px; font-size:12px; color:var(--muted)}
+  .lista-sel .selhead label{display:flex; align-items:center; gap:6px; cursor:pointer}
   .reprint-actions button{width:auto; padding:10px 14px; font-size:14px; background:#F0EEE6; color:var(--ink)}
   .reimp-venta{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 10px}
   .reimp-venta input{flex:1; min-width:220px; padding:10px 12px; border:1px solid var(--line);
@@ -150,6 +167,13 @@
   .seg-sec .seg-tit{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:17px}
   .seg-sec .seg-n{margin-left:auto; font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:24px}
   .seg-sec .list{margin:0 18px 14px; border-top:1px solid var(--line)}
+  /* Tarjetas tipo ML (contadores por etapa) */
+  .seg-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0}
+  .seg-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px;
+    border-top:4px solid var(--line); cursor:pointer; transition:transform .08s}
+  .seg-card:hover{transform:translateY(-2px)}
+  .seg-card .c-n{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:34px; line-height:1}
+  .seg-card .c-l{font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:.03em}
   /* Buscar venta */
   .buscar-wrap{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px}
   .buscar-wrap h2{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px}
@@ -204,25 +228,34 @@
     <button class="tab" onclick="verTab('verificacion', this)">Verificación</button>
     <button class="tab" onclick="verTab('seguimiento', this)">Seguimiento</button>
     <button class="tab" onclick="verTab('camiones', this)">Camiones</button>
+    <button class="tab" onclick="verTab('demo', this)">Demo</button>
   </div>
 
   <div id="codigo-banner"><div class="cb-bar"></div><div class="cb-body" id="cb-body"></div></div>
 
   <section id="view-impresion" class="view active">
+    <div class="vivo-head">
+      <div class="vivo-estado" id="vivo-estado">Cargando panel…</div>
+      <button class="vivo-refresh" onclick="cargarPanel(true)">↻ Actualizar ahora</button>
+    </div>
     <div class="grid">
       <section class="panel" data-t="flex"><div class="bar"></div><div class="body">
         <h2>Flex</h2><div class="sub">Self-service · logística propia</div>
-        <div class="count empty" id="count-flex"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
-        <button class="btn-find" onclick="buscar('flex')">Buscar pendientes</button>
-        <button class="btn-print" id="print-flex" onclick="imprimir('flex')" disabled>Descargar etiquetas</button>
-        <div class="status" id="status-flex"></div><div id="list-flex"></div>
+        <div class="count" id="count-flex"><span class="num" id="num-flex">—</span><span class="lbl">para imprimir</span></div>
+        <div class="panel-actions">
+          <button class="btn-print" id="print-flex" onclick="imprimirTanda('flex')" disabled>Imprimir todas (Flex)</button>
+          <button class="btn-sel" id="printsel-flex" onclick="imprimirSeleccion('flex')" disabled>Imprimir selección</button>
+        </div>
+        <div class="status" id="status-flex"></div><div class="lista-sel" id="list-flex"></div>
       </div></section>
       <section class="panel" data-t="colecta"><div class="bar"></div><div class="body">
         <h2>Colecta</h2><div class="sub">Cross-docking · lo retira Mercado Libre</div>
-        <div class="count empty" id="count-colecta"><span class="num">—</span><span class="lbl">listos para imprimir</span></div>
-        <button class="btn-find" onclick="buscar('colecta')">Buscar pendientes</button>
-        <button class="btn-print" id="print-colecta" onclick="imprimir('colecta')" disabled>Descargar etiquetas</button>
-        <div class="status" id="status-colecta"></div><div id="list-colecta"></div>
+        <div class="count" id="count-colecta"><span class="num" id="num-colecta">—</span><span class="lbl">para imprimir</span></div>
+        <div class="panel-actions">
+          <button class="btn-print" id="print-colecta" onclick="imprimirTanda('colecta')" disabled>Imprimir todas (Colecta)</button>
+          <button class="btn-sel" id="printsel-colecta" onclick="imprimirSeleccion('colecta')" disabled>Imprimir selección</button>
+        </div>
+        <div class="status" id="status-colecta"></div><div class="lista-sel" id="list-colecta"></div>
       </div></section>
     </div>
     <div class="reprint">
@@ -292,7 +325,23 @@
       <button style="width:auto; padding:10px 16px; background:var(--ink); color:#fff" onclick="cargarSeguimiento()">Actualizar tablero</button>
     </div>
     <div class="status" id="status-seg"></div>
+    <div id="seg-cards" class="seg-cards"></div>
     <div id="seg-board"></div>
+  </section>
+
+  <section id="view-demo" class="view">
+    <div class="placeholder" style="text-align:left">
+      <h3>Modo demo · probar el sistema</h3>
+      <p style="color:var(--muted); margin:0 0 16px">Crea envíos de <b>prueba</b> en la base para que puedas ensayar todo el circuito
+      (imprimir, escanear, ver el flujo, la alerta de cancelación) sin depender de que Mercado Libre tenga etiquetas liberadas.
+      Los datos de prueba están marcados como DEMO y no se mezclan con los reales.</p>
+      <div class="reprint-actions">
+        <button style="background:var(--ok); color:#fff" onclick="sembrarDemo()">Crear datos de prueba</button>
+        <button style="background:var(--err); color:#fff" onclick="limpiarDemo()">Borrar datos de prueba</button>
+      </div>
+      <div class="status" id="status-demo"></div>
+      <div id="demo-guia"></div>
+    </div>
   </section>
 
   <section id="view-camiones" class="view">
@@ -394,6 +443,13 @@
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     cargarImpresas(); cargarCodigo();
+    cargarPanel();
+    // Auto-refresco cada 30s (solo cuando la pestaña de impresión está visible)
+    if(_panelTimer) clearInterval(_panelTimer);
+    _panelTimer = setInterval(()=>{
+      const vivo = document.getElementById('view-impresion');
+      if(vivo && vivo.classList.contains('active') && !document.hidden) cargarPanel();
+    }, 30000);
   }
   function mostrarLogin(){
     document.getElementById('app').style.display='none';
@@ -467,47 +523,88 @@
     }catch(e){ st.className='status err'; st.textContent='Error: ' + e.message; }
   }
 
-  // ---------- Buscar pendientes ----------
-  async function buscar(tipo){
-    const st=document.getElementById("status-"+tipo), cnt=document.getElementById("count-"+tipo),
-      list=document.getElementById("list-"+tipo), print=document.getElementById("print-"+tipo);
-    st.className="status"; st.textContent="Buscando envíos en Mercado Libre…";
-    list.innerHTML=""; print.disabled=true; cnt.className="count empty"; cnt.querySelector(".num").textContent="…";
+  // ---------- PANEL VIVO ----------
+  let _panelData = { flex: [], colecta: [] };
+  let _panelTimer = null;
+
+  async function cargarPanel(manual){
+    const est = document.getElementById('vivo-estado');
+    if(manual){
+      est.innerHTML = '<span class="vivo-dot" style="background:#B88207"></span>Sincronizando con Mercado Libre… (esto puede tardar un minuto la primera vez)';
+      try{ await authFetch(`${API}/api/despacho/foto/cargar`, { method:'POST' }); }catch(e){}
+      // damos unos segundos a que la carga de fondo avance y luego leemos
+      await new Promise(r => setTimeout(r, 4000));
+    }
     try{
-      const r = await authFetch(`${API}/api/despacho/pendientes?tipo=${tipo}`); const d = await r.json();
-      if(!r.ok) throw new Error(d.error || "No se pudo consultar");
-      cache[tipo]=d; cnt.className="count"+(d.cantidad?"":" empty"); cnt.querySelector(".num").textContent=d.cantidad;
-      if(d.cantidad){ print.disabled=false; print.textContent=`Descargar etiquetas (${d.cantidad})`;
-        st.className="status ok"; st.textContent="Ordenadas por SKU, listas para imprimir."; }
-      else { st.className="status"; st.textContent="No hay envíos listos para despachar en esta tanda."; }
-      renderLista(tipo, d);
-    }catch(e){ st.className="status err"; st.textContent="Error: "+e.message;
-      cnt.className="count empty"; cnt.querySelector(".num").textContent="—"; }
+      const r = await authFetch(`${API}/api/despacho/panel`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo cargar el panel');
+      const porImp = d.etapas.para_imprimir || [];
+      _panelData.flex    = porImp.filter(s => s.tipo === 'flex');
+      _panelData.colecta = porImp.filter(s => s.tipo === 'colecta');
+      pintarTanda('flex'); pintarTanda('colecta');
+      const cuando = d.actualizado ? new Date(d.actualizado).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '—';
+      est.innerHTML = `<span class="vivo-dot"></span>En vivo · ${d.total_foto} envíos en seguimiento · última novedad ${cuando}`;
+      if(d.total_foto === 0 && !manual){
+        est.innerHTML = `<span class="vivo-dot" style="background:#B88207"></span>La foto local está vacía. Tocá “Actualizar ahora” para la primera carga.`;
+      }
+    }catch(e){ est.innerHTML = `<span class="vivo-dot" style="background:var(--err)"></span>Error: ${esc(e.message)}`; }
   }
-  function renderLista(tipo, d){
-    const list=document.getElementById("list-"+tipo); let html="";
-    if(d.listos.length){
-      html+=`<div class="group-h">A imprimir · por SKU</div><div class="list">`;
-      for(const s of d.listos) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
-        <span class="venta">${esc(s.nro_venta)||""}</span><span class="u">×${s.unidades||1}</span></div>`;
-      html+=`</div>`;
+
+  function pintarTanda(tipo){
+    const arr = _panelData[tipo] || [];
+    document.getElementById('num-'+tipo).textContent = arr.length;
+    const cnt = document.getElementById('count-'+tipo);
+    cnt.className = 'count' + (arr.length ? '' : ' empty');
+    const print = document.getElementById('print-'+tipo);
+    const printsel = document.getElementById('printsel-'+tipo);
+    print.disabled = !arr.length;
+    print.textContent = arr.length ? `Imprimir todas (${tipo} · ${arr.length})` : `Imprimir todas (${tipo})`;
+    const list = document.getElementById('list-'+tipo);
+    if(!arr.length){ list.innerHTML=''; printsel.disabled=true; return; }
+    let html = `<div class="selhead"><label><input type="checkbox" onchange="toggleTodos('${tipo}',this.checked)"> Seleccionar todo</label></div>`;
+    for(const s of arr){
+      html += `<div class="selrow">
+        <input type="checkbox" class="chk-${tipo}" value="${esc(s.shipment_id)}" onchange="actualizarSelBtn('${tipo}')">
+        <span class="sku">${esc(s.sku)||'SIN SKU'}</span>
+        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}</span>
+        <span class="venta">${esc(s.nro_venta)||''}</span>
+        <span class="u">×${s.unidades||1}</span></div>`;
     }
-    if(d.programados && d.programados.length){
-      html+=`<details><summary>${d.programados.length} envío(s) programados para más adelante (no se imprimen)</summary><div class="list">`;
-      for(const s of d.programados) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
-        <span class="venta">${esc(s.nro_venta)||""}</span><span class="pill">despachar ${esc(s.limite)||"?"}</span></div>`;
-      html+=`</div></details>`;
-    }
-    if(d.no_listos && d.no_listos.length){
-      html+=`<details><summary>${d.no_listos.length} envío(s) todavía no listos</summary><div class="list">`;
-      for(const s of d.no_listos) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)}</span>
-        <span class="venta">${esc(s.nro_venta)||""}</span><span class="pill">${esc(s.status)||"?"}</span></div>`;
-      html+=`</div></details>`;
-    }
-    list.innerHTML=html;
+    list.innerHTML = html;
+    printsel.disabled = true;
+  }
+  function toggleTodos(tipo, val){
+    document.querySelectorAll('.chk-'+tipo).forEach(c => c.checked = val);
+    actualizarSelBtn(tipo);
+  }
+  function actualizarSelBtn(tipo){
+    const n = document.querySelectorAll('.chk-'+tipo+':checked').length;
+    const b = document.getElementById('printsel-'+tipo);
+    b.disabled = !n; b.textContent = n ? `Imprimir selección (${n})` : 'Imprimir selección';
+  }
+  function idsSeleccion(tipo){
+    return Array.from(document.querySelectorAll('.chk-'+tipo+':checked')).map(c => c.value);
+  }
+
+  async function imprimirTanda(tipo){
+    const arr = _panelData[tipo] || [];
+    if(!arr.length) return;
+    await imprimirIds(tipo, arr.map(s => s.shipment_id), `etiquetas_${tipo}.pdf`);
+  }
+  async function imprimirSeleccion(tipo){
+    const ids = idsSeleccion(tipo);
+    if(!ids.length) return;
+    await imprimirIds(tipo, ids, `etiquetas_${tipo}_seleccion.pdf`);
+  }
+  async function imprimirIds(tipo, ids, nombre){
+    const st = document.getElementById('status-'+tipo);
+    st.className='status'; st.textContent=`Generando ${ids.length} etiqueta(s)…`;
+    try{
+      const {unidas,fallidas} = await bajarPdf(`${API}/api/despacho/etiquetas-seleccion?ids=${ids.join(',')}`, nombre);
+      st.className='status ok';
+      st.textContent = `${unidas||ids.length} etiqueta(s) generadas`+(fallidas&&fallidas!=='0'?` · ${fallidas} fallaron`:'')+'. Pasaron a “en preparación”.';
+      setTimeout(()=>{ cargarPanel(); cargarImpresas(); }, 1200);
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
   // ---------- PDF ----------
@@ -520,17 +617,6 @@
     a.href=u; a.download=defaultName; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),4000);
     return { unidas, fallidas };
-  }
-  async function imprimir(tipo){
-    const st=document.getElementById("status-"+tipo), print=document.getElementById("print-"+tipo), prev=print.textContent;
-    print.disabled=true; print.textContent="Generando PDF…";
-    st.className="status"; st.textContent="Pidiendo etiquetas a Mercado Libre y armando el PDF…";
-    try{
-      const {unidas,fallidas}=await bajarPdf(`${API}/api/despacho/etiquetas?tipo=${tipo}`, `etiquetas_${tipo}.pdf`);
-      st.className="status ok"; st.textContent=`PDF listo: ${unidas||"?"} etiqueta(s)`+(fallidas&&fallidas!=="0"?` · ${fallidas} no se unieron`:"")+".";
-      cargarImpresas();
-    }catch(e){ st.className="status err"; st.textContent="Error: "+e.message; }
-    finally{ print.disabled=false; print.textContent=prev; }
   }
   async function cargarImpresas(){
     const st=document.getElementById("status-reprint");
@@ -669,16 +755,26 @@
   ];
   async function cargarSeguimiento(){
     const st=document.getElementById('status-seg'), board=document.getElementById('seg-board');
+    const cards=document.getElementById('seg-cards');
     st.className='status'; st.textContent='Armando el flujo (consulta cada envío en Mercado Libre, puede tardar)…';
     try{
       const r=await authFetch(`${API}/api/despacho/seguimiento`); const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo cargar');
       st.textContent=`Envíos de los últimos ${d.dias} días.`;
+      // Tarjetas tipo ML
+      let cardsHtml='';
+      for(const [key,titulo,color] of SEG_ETAPAS){
+        const n=(d.etapas[key]||[]).length;
+        cardsHtml+=`<div class="seg-card" style="border-top-color:${color}" onclick="abrirEtapa('${key}')">
+          <div class="c-n" style="color:${color}">${n}</div><div class="c-l">${titulo}</div></div>`;
+      }
+      cards.innerHTML=cardsHtml;
+      // Detalle desplegable
       let html='';
       for(const [key,titulo,color] of SEG_ETAPAS){
         const filas=d.etapas[key]||[];
         const abierto=(key==='devoluciones'&&filas.length)?' open':'';
-        html+=`<details class="seg-sec"${abierto}><summary>
+        html+=`<details class="seg-sec" id="seg-${key}"${abierto}><summary>
           <span class="seg-dot" style="background:${color}"></span>
           <span class="seg-tit">${titulo}</span>
           <span class="seg-n" style="color:${color}">${filas.length}</span></summary>`;
@@ -699,6 +795,39 @@
         html+=`</details>`;
       }
       board.innerHTML=html;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; cards.innerHTML=''; }
+  }
+  function abrirEtapa(key){
+    const el=document.getElementById('seg-'+key);
+    if(el){ el.open=true; el.scrollIntoView({behavior:'smooth', block:'center'}); }
+  }
+
+  // ---------- Modo demo ----------
+  async function sembrarDemo(){
+    const st=document.getElementById('status-demo'); st.className='status'; st.textContent='Creando datos de prueba…';
+    try{
+      const r=await authFetch(`${API}/api/despacho/demo/sembrar`,{method:'POST'}); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo');
+      st.className='status ok'; st.textContent=`Listo: ${d.total} envíos de prueba creados.`;
+      document.getElementById('demo-guia').innerHTML=`
+        <div class="list" style="margin-top:14px">
+          <div class="group-h">Cómo probar</div>
+          <div class="row"><span class="sku">1</span><span class="ti">Andá a <b>Seguimiento</b> → vas a ver las tarjetas con envíos en cada etapa.</span></div>
+          <div class="row"><span class="sku">2</span><span class="ti">Andá a <b>Verificación</b> y escaneá/tipeá esta venta para ver el OK verde:
+            <b class="venta">${esc(d.probar_ok)||'—'}</b></span></div>
+          <div class="row"><span class="sku">3</span><span class="ti">Después probá esta otra para ver la alerta roja <b>NO DESPACHAR</b>:
+            <b class="venta">${esc(d.probar_cancelada)||'—'}</b></span></div>
+          <div class="row"><span class="sku">4</span><span class="ti">En <b>Verificación</b> vas a ver el panel “Impresas sin despachar” con lo que falta subir al camión.</span></div>
+        </div>`;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+  async function limpiarDemo(){
+    const st=document.getElementById('status-demo'); st.className='status'; st.textContent='Borrando datos de prueba…';
+    try{
+      const r=await authFetch(`${API}/api/despacho/demo/limpiar`,{method:'POST'}); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo');
+      st.className='status ok'; st.textContent='Datos de prueba eliminados.';
+      document.getElementById('demo-guia').innerHTML='';
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
