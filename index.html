@@ -135,15 +135,14 @@
 
   .colectas-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px}
   @media(max-width:720px){.colectas-grid{grid-template-columns:1fr}}
-  .ccard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; border-left:5px solid var(--colecta)}
-  .ccard[data-t="flex"]{border-left-color:var(--flex)}
-  .ccard .ch{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
-  .ccard .tanda{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em}
-  .ccard .hora{font-size:13px; color:var(--muted)}
-  .ccard .field{font-size:13px; margin:3px 0}
-  .ccard .field b{font-weight:600}
-  .ccard .pat{font-family:'JetBrains Mono',monospace; font-weight:700}
-  .ccard .solohoy{font-size:11px; color:var(--warn); font-weight:600}
+  .ccard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; border-left:5px solid var(--colecta)}
+  .ccard-pasada{opacity:.5}
+  .ccard .ch{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:10px}
+  .ccard .hora{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:26px; letter-spacing:.01em}
+  .ccard .corte{font-size:14px; color:var(--muted)}
+  .ccard .corte-alerta{color:var(--err); font-weight:600}
+  .col-proxima{font-size:11px; font-weight:700; background:var(--ok); color:#fff; padding:3px 9px; border-radius:20px; letter-spacing:.05em}
+  .col-pasada{font-size:11px; color:var(--muted); font-style:italic}
 
   .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:40px 24px; text-align:center; color:var(--muted)}
   .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
@@ -370,12 +369,11 @@
   <section id="view-camiones" class="view">
     <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px">
       <h2 style="font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0">Colectas de hoy</h2>
-      <button style="width:auto; padding:10px 16px; background:var(--ink); color:#fff" onclick="cargarColectas()">Cargar colectas</button>
+      <button style="width:auto; padding:10px 16px; background:#F0EEE6; color:var(--ink)" onclick="cargarColectas()">↻ Actualizar</button>
     </div>
+    <p class="buscar-hint">Horarios en que Mercado Libre pasa a buscar los paquetes de <b>Colecta</b>.
+    El <b>corte</b> es la hora límite para tener todo listo. (Flex no tiene colecta de ML: lo despachás vos.)</p>
     <div class="status" id="status-colectas"></div><div id="colectas-list"></div>
-    <div class="placeholder" style="margin-top:18px"><h3>Registro de camiones</h3>
-      <p>El próximo paso: completar tipo de camión, teléfono, pallets y la puerta<br>
-      (foto + medidas), y guardar el historial por patente.</p></div>
   </section>
 
   <footer>Las etiquetas salen ordenadas por SKU: todas las ventas del mismo producto quedan juntas.</footer>
@@ -489,6 +487,7 @@
       (name === 'verificacion' || name === 'camiones') ? 'block' : 'none';
     if(name === 'verificacion'){ cargarDespachados(); setTimeout(()=>document.getElementById('scan-input').focus(), 50); }
     else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Verificación
+    if(name === 'camiones'){ cargarColectas(); }
     if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
   }
 
@@ -532,18 +531,27 @@
     try{
       const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
-      if(!d.colectas.length){ st.textContent='No hay colectas programadas para hoy (o ML no las expone por API).'; return; }
+      const colectas = (d.colectas || []).filter(c => c.tanda === 'colecta');
+      if(!colectas.length){ st.textContent='No hay colectas programadas para hoy.'; return; }
       st.textContent='';
+      // Hora actual ART (HH:MM) para marcar pasadas / próxima
+      const ahora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'America/Argentina/Buenos_Aires'});
+      let proximaMarcada = false;
       let html = `<div class="colectas-grid">`;
-      for(const c of d.colectas){
-        html += `<div class="ccard" data-t="${c.tanda}">
-          <div class="ch"><span class="tanda">${esc(c.tanda)}</span><span class="hora">${esc(c.from)}–${esc(c.to)}${c.cutoff?` · corte ${esc(c.cutoff)}`:''}</span></div>
-          <div class="field"><b>Transportista:</b> ${esc(c.carrier)||'—'}</div>
-          <div class="field"><b>Chofer:</b> ${esc(c.chofer)||'—'}</div>
-          <div class="field"><b>Patente:</b> <span class="pat">${esc(c.patente)||'—'}</span> ${c.solo_hoy?'<span class="solohoy">(solo hoy)</span>':''}</div>
-          <div class="field"><b>Vehículo:</b> ${esc(c.vehiculo)||'—'}</div></div>`;
+      for(const c of colectas){
+        const pasada = c.to && c.to < ahora;
+        let etiqueta = '';
+        if(pasada){ etiqueta = '<span class="col-pasada">ya pasó</span>'; }
+        else if(!proximaMarcada){ etiqueta = '<span class="col-proxima">PRÓXIMA</span>'; proximaMarcada = true; }
+        const cerca = !pasada && c.cutoff && c.cutoff <= ahora; // ya pasó el corte pero no la colecta
+        html += `<div class="ccard${pasada?' ccard-pasada':''}">
+          <div class="ch"><span class="hora">${esc(c.from)}–${esc(c.to)}</span>${etiqueta}</div>
+          <div class="corte${cerca?' corte-alerta':''}">Corte: <b>${esc(c.cutoff)||'—'}</b>${cerca?' · ¡ya pasó el corte!':''}</div>
+        </div>`;
       }
-      html += `</div>`; list.innerHTML = html;
+      html += `</div>`;
+      html += `<p class="buscar-hint" style="margin-top:14px">Mercado Libre no informa por API el transportista ni la patente de cada colecta, solo el horario.</p>`;
+      list.innerHTML = html;
     }catch(e){ st.className='status err'; st.textContent='Error: ' + e.message; }
   }
 
@@ -839,7 +847,8 @@
           Se escaneó el ${d.despachado_at?new Date(d.despachado_at).toLocaleString('es-AR'):'—'}${d.usuario?' por '+esc(d.usuario):''}.</div></div>`;
       } else {
         beep(false);
-        out.innerHTML=`<div class="scan-card scan-ok"><div class="big">✓ Despachada</div>
+        const conAviso = (d.resultado === 'ok_aviso') && d.aviso;
+        out.innerHTML=`<div class="scan-card ${conAviso?'scan-warn':'scan-ok'}"><div class="big">✓ Despachada${conAviso?' · revisá' : ''}</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
           Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> · ${esc(d.tipo)||''}${d.aviso?'<br>⚠ '+esc(d.aviso):''}</div></div>`;
         cargarDespachados();
