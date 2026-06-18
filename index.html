@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
     --bone:#F4F2EC; --ink:#1B1B1A; --panel:#FFFFFF;
@@ -154,6 +155,18 @@
     text-transform:uppercase; letter-spacing:.03em; font-size:34px; line-height:1.05}
   .scan-card .det{font-size:14px; margin-top:10px; opacity:.95}
   .scan-card .det .mono{font-family:'JetBrains Mono',monospace}
+  .scan-modos{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:6px 0 12px}
+  .scan-modo-btn{width:auto; padding:11px 18px; font-size:15px; background:var(--ink); color:#fff}
+  .scan-modo-btn.activo{background:var(--err)}
+  .scan-test{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted); cursor:pointer}
+  .scan-test input{width:16px; height:16px}
+  #cam-wrap{margin:10px 0 16px; max-width:380px}
+  #cam-reader{border-radius:14px; overflow:hidden; border:1px solid var(--line)}
+  .cam-hint{font-size:13px; color:var(--muted); margin-top:8px; text-align:center}
+  .test-card{margin-top:14px; border-radius:14px; padding:18px 20px; background:#1F2937; color:#fff}
+  .test-card .lbl{font-size:12px; text-transform:uppercase; letter-spacing:.05em; opacity:.7}
+  .test-card .crudo{font-family:'JetBrains Mono',monospace; font-size:15px; word-break:break-all; margin-top:6px; line-height:1.5}
+  .test-card .nums{margin-top:10px; font-size:13px; opacity:.9}
   .scan-ok{background:var(--ok)} .scan-cancel{background:var(--err)} .scan-warn{background:#B7791F}
   .total-box .n.falta{color:var(--err)}
   .row .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
@@ -296,12 +309,22 @@
   <section id="view-verificacion" class="view">
     <div class="buscar-wrap">
       <h2>Despacho · escaneá al cargar el camión</h2>
-      <p class="buscar-hint">Escaneá el QR de la etiqueta (o tipeá el número de venta o de envío) y dale Enter.
+      <p class="buscar-hint">Escaneá el QR de la etiqueta con la <b>cámara del celu</b> o con la <b>pistola lectora</b>.
       Antes de registrar, el sistema chequea <b>en vivo</b> en Mercado Libre que la venta no esté cancelada.</p>
+
+      <div class="scan-modos">
+        <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
+        <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test (solo mostrar lo que lee, no despachar)</label>
+      </div>
+      <div id="cam-wrap" style="display:none">
+        <div id="cam-reader"></div>
+        <div class="cam-hint" id="cam-hint"></div>
+      </div>
+
       <div class="buscar-row">
-        <input id="scan-input" placeholder="Escaneá acá…" autocomplete="off"
-               onkeydown="if(event.key==='Enter') escanear()">
-        <button onclick="escanear()" id="btn-scan">Despachar</button>
+        <input id="scan-input" placeholder="…o dispará con la pistola acá" autocomplete="off"
+               onkeydown="if(event.key==='Enter') escanear(this.value)">
+        <button onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Despachar</button>
       </div>
       <div id="scan-result"></div>
     </div>
@@ -465,6 +488,7 @@
     document.getElementById('codigo-banner').style.display =
       (name === 'verificacion' || name === 'camiones') ? 'block' : 'none';
     if(name === 'verificacion'){ cargarDespachados(); setTimeout(()=>document.getElementById('scan-input').focus(), 50); }
+    else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Verificación
     if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
   }
 
@@ -692,6 +716,74 @@
     finally{ btn.disabled=false; }
   }
 
+  // ---------- Escaneo con cámara del celu ----------
+  let _camScanner = null;
+  let _ultimoLeido = '';
+  let _ultimoLeidoAt = 0;
+
+  function actualizarHintTest(){
+    const test = document.getElementById('modo-test').checked;
+    const hint = document.getElementById('cam-hint');
+    if(hint) hint.textContent = test
+      ? 'MODO TEST: apuntá al QR o código de barras y te muestro el texto crudo (no despacha nada).'
+      : 'Apuntá la cámara al QR o código de barras de la etiqueta.';
+  }
+
+  async function toggleCamara(){
+    const wrap = document.getElementById('cam-wrap');
+    const btn = document.getElementById('btn-cam');
+    if(_camScanner){ await detenerCamara(); return; }
+    if(typeof Html5Qrcode === 'undefined'){
+      document.getElementById('scan-result').innerHTML =
+        `<div class="status err">No se pudo cargar el lector de cámara. Probá recargar la página.</div>`;
+      return;
+    }
+    wrap.style.display = 'block';
+    btn.textContent = '✕ Cerrar cámara'; btn.classList.add('activo');
+    actualizarHintTest();
+    _camScanner = new Html5Qrcode('cam-reader');
+    try{
+      // Formatos a detectar: QR + códigos de barras comunes en etiquetas ML
+      const fmts = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.ITF
+      ] : undefined;
+      await _camScanner.start(
+        { facingMode: 'environment' },          // cámara trasera
+        { fps: 10, qrbox: { width: 250, height: 250 }, formatsToSupport: fmts },
+        onLeerQR,
+        () => {}                                 // ignora frames sin código
+      );
+    }catch(e){
+      document.getElementById('cam-hint').textContent =
+        'No se pudo abrir la cámara. Revisá que diste permiso (y que estás en https).';
+      btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo');
+      _camScanner = null;
+    }
+  }
+
+  async function detenerCamara(){
+    const btn = document.getElementById('btn-cam');
+    try{ if(_camScanner){ await _camScanner.stop(); await _camScanner.clear(); } }catch(e){}
+    _camScanner = null;
+    document.getElementById('cam-wrap').style.display = 'none';
+    btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo');
+  }
+
+  function onLeerQR(texto){
+    // Evitar leer el mismo QR muchas veces seguidas
+    const ahora = Date.now();
+    if(texto === _ultimoLeido && ahora - _ultimoLeidoAt < 3000) return;
+    _ultimoLeido = texto; _ultimoLeidoAt = ahora;
+    beep(false);
+    escanear(texto);
+  }
+
   // ---------- Verificación: escaneo de despacho ----------
   function beep(error){
     try{
@@ -703,12 +795,31 @@
       setTimeout(()=>{ o.stop(); ctx.close(); }, error?600:130);
     }catch(e){}
   }
-  async function escanear(){
+
+  function numerosDetectados(texto){
+    const nums = String(texto||'').match(/\d{8,}/g) || [];
+    return [...new Set(nums)];
+  }
+
+  async function escanear(valor){
     const input=document.getElementById('scan-input');
-    const codigo=(input.value||'').trim();
+    const codigo=(valor!=null ? String(valor) : (input.value||'')).trim();
     if(!codigo) return;
     const out=document.getElementById('scan-result');
     const btn=document.getElementById('btn-scan');
+
+    // MODO TEST: solo mostrar lo que leyó, sin despachar
+    if(document.getElementById('modo-test') && document.getElementById('modo-test').checked){
+      const nums = numerosDetectados(codigo);
+      out.innerHTML = `<div class="test-card">
+        <div class="lbl">Texto crudo que devolvió el escaneo</div>
+        <div class="crudo">${esc(codigo)}</div>
+        <div class="nums">Números largos detectados (8+ dígitos): ${nums.length ? nums.map(n=>`<span class="mono">${esc(n)}</span>`).join(' · ') : '—'}</div>
+      </div>`;
+      input.value=''; 
+      return;
+    }
+
     btn.disabled=true;
     out.innerHTML=`<div class="status">Chequeando la venta en Mercado Libre…</div>`;
     try{
