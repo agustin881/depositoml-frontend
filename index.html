@@ -6,206 +6,239 @@
 <title>Depósito · Despacho</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
-    --bone:#F4F2EC; --ink:#1B1B1A; --panel:#FFFFFF;
-    --line:#E1DDD2; --muted:#7A766C;
-    --flex:#1C6DD0; --colecta:#E8590C;
-    --ok:#2F9E44; --warn:#B88207; --err:#D63B2F;
+    --bg:#EBEBEB; --surface:#FFFFFF;
+    --ink:#1A1A1A; --ink2:#333333; --muted:#999999; --muted2:#666666;
+    --line:#ECECEC; --line2:#D9D9D9;
+    --flex:#3483FA; --flex-d:#2968c8;
+    --colecta:#F5821F; --colecta-d:#d96e12;
+    --ok:#00A650; --warn:#F5A623; --err:#E63946;
+    --shadow:0 1px 2px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.04);
   }
   *{box-sizing:border-box}
-  body{margin:0; background:var(--bone); color:var(--ink);
-    font-family:'Inter',system-ui,sans-serif; line-height:1.45; -webkit-font-smoothing:antialiased}
-  .wrap{max-width:1040px; margin:0 auto; padding:24px 20px 64px}
+  body{margin:0; background:var(--bg); color:var(--ink2);
+    font-family:'Inter',system-ui,-apple-system,sans-serif; line-height:1.45; -webkit-font-smoothing:antialiased}
+  button{font-family:inherit; cursor:pointer}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid #3483FA55; outline-offset:2px}
+  input:focus-visible{outline:2px solid #3483FA55; outline-offset:1px}
 
-  /* Login */
-  #login{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:32px; width:100%; max-width:360px}
-  .card .bar{height:6px; background:var(--colecta); border-radius:4px; margin-bottom:20px}
-  .card h1{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
-    letter-spacing:.03em; font-size:30px; margin:0 0 4px}
-  .card .sub{color:var(--muted); font-size:13px; margin-bottom:22px}
-  .card label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
-    font-weight:600; margin:12px 0 5px}
-  .card input{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:9px; font-size:15px;
-    font-family:'Inter',sans-serif}
-  .card button{width:100%; margin-top:20px; padding:13px; background:var(--ink); color:#fff; border:none;
-    border-radius:9px; font-weight:600; font-size:15px; cursor:pointer}
-  .card button:disabled{opacity:.5; cursor:not-allowed}
+  /* ===== LOGIN ===== */
+  #login{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg)}
+  .card{background:var(--surface); border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,.08); padding:32px; width:100%; max-width:360px}
+  .card .brand-lg{font-weight:800; font-size:26px; letter-spacing:-.02em; display:flex; align-items:center; gap:10px; margin-bottom:4px; color:var(--ink)}
+  .card .brand-lg .dot{width:14px; height:14px; border-radius:4px; background:var(--colecta)}
+  .card .sub{color:var(--muted); font-size:13px; margin-bottom:20px}
+  .card label{display:block; font-size:12px; color:var(--muted2); font-weight:600; margin:12px 0 5px}
+  .card input{width:100%; padding:12px 14px; border:1px solid var(--line2); border-radius:8px; font-size:15px; font-family:inherit}
+  .card button{width:100%; margin-top:18px; padding:13px; background:var(--flex); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:15px}
   .card .err{color:var(--err); font-size:13px; margin-top:12px; min-height:16px}
   .card .cfg{color:var(--warn); font-size:13px; margin-top:14px}
 
-  header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:18px}
-  header.top h1{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
-    letter-spacing:.02em; text-transform:uppercase; font-size:32px; margin:0}
-  .tagline{color:var(--muted); font-size:14px}
-  .salir{margin-left:auto; width:auto; padding:8px 14px; background:none; border:1px solid var(--line);
-    border-radius:8px; font-size:13px; color:var(--muted); cursor:pointer}
+  /* ===== APP BAR + NAV ===== */
+  .appbar{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line); box-shadow:var(--shadow)}
+  .appbar-inner{max-width:1040px; margin:0 auto; padding:10px 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .brand{font-weight:800; font-size:19px; letter-spacing:-.01em; color:var(--ink); display:flex; align-items:center; gap:9px}
+  .brand .dot{width:11px; height:11px; border-radius:3px; background:var(--colecta)}
+  .spacer{flex:1}
+  #cb-body{display:flex; align-items:center; gap:8px; background:#F5F5F5; border:1px solid var(--line2); border-radius:8px; padding:6px 10px}
+  #cb-body:empty{display:none}
+  #cb-body.cc-falta{background:#FFF4E5; border-color:#F5C36B}
+  .cc-label{color:var(--muted2); font-size:11px; text-transform:uppercase; letter-spacing:.04em; font-weight:700}
+  .cc-label.cc-old{color:var(--err)}
+  .cc-code{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px; letter-spacing:.05em; color:var(--ink)}
+  .cc-edit{background:none; border:none; color:var(--flex); font-size:12px; text-decoration:underline; padding:0}
+  #cb-body input{font-family:'JetBrains Mono',monospace; font-size:14px; text-transform:uppercase; padding:5px 8px; border:1px solid var(--line2); border-radius:6px; width:120px; letter-spacing:.05em}
+  .cc-save{background:var(--flex); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:13px; font-weight:600}
+  .salir{padding:7px 14px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; font-size:13px; color:var(--muted2); font-weight:500}
+  .salir:hover{background:#F5F5F5}
 
-  .tabs{display:flex; gap:4px; border-bottom:2px solid var(--line); margin-bottom:20px}
-  .tab{font-family:'Barlow Semi Condensed',sans-serif; font-weight:600; text-transform:uppercase;
-    letter-spacing:.03em; font-size:16px; background:none; border:none; cursor:pointer;
-    padding:10px 16px; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-2px; width:auto}
-  .tab.active{color:var(--ink); border-bottom-color:var(--ink)}
+  .tabs{display:flex; gap:2px; max-width:1040px; margin:0 auto; padding:0 16px}
+  .tab{background:none; border:none; padding:13px 16px; font-size:14px; font-weight:600; color:var(--muted2);
+    border-bottom:3px solid transparent; display:flex; align-items:center; gap:8px; margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--flex); border-bottom-color:var(--flex)}
+  .badge{display:inline-flex; align-items:center; justify-content:center; min-width:19px; height:19px; padding:0 5px;
+    border-radius:10px; color:#fff; font-size:11px; font-weight:700; line-height:1}
+  .badge-imprimir{background:var(--flex)}
+  .badge-despachar{background:var(--colecta)}
+
+  .bottombar{display:none}
+
+  /* ===== LAYOUT ===== */
+  .wrap{max-width:1040px; margin:0 auto; padding:20px 20px 44px}
   .view{display:none} .view.active{display:block}
 
-  #codigo-banner{display:none; margin-bottom:22px; border-radius:14px; overflow:hidden;
-    border:1px solid var(--line); background:var(--panel)}
-  #codigo-banner .cb-bar{height:6px; background:var(--colecta)}
-  #codigo-banner .cb-body{padding:16px 20px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
-  .cb-label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600}
-  .cb-code{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:34px; letter-spacing:.06em}
-  .cb-old{color:var(--err); font-weight:600}
-  #codigo-banner input{font-family:'JetBrains Mono',monospace; font-size:18px; text-transform:uppercase;
-    padding:10px 12px; border:1px solid var(--line); border-radius:9px; width:160px; letter-spacing:.05em}
-  #codigo-banner button{width:auto; padding:10px 16px; background:var(--ink); color:#fff;
-    font-weight:600; font-size:14px; border:none; border-radius:9px; cursor:pointer}
-  #codigo-banner .link{background:none; color:var(--colecta); padding:0; font-size:13px; text-decoration:underline}
-
-  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
-  @media(max-width:720px){.grid{grid-template-columns:1fr}}
-  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column}
-  .panel .bar{height:6px}
-  .panel[data-t="flex"] .bar{background:var(--flex)}
-  .panel[data-t="colecta"] .bar{background:var(--colecta)}
-  .panel .body{padding:20px}
-  .panel h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase;
-    letter-spacing:.04em; font-size:22px; margin:0 0 2px}
-  .panel .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
-  .count{display:flex; align-items:flex-end; gap:10px; margin:6px 0 16px; min-height:58px}
-  .count .num{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:52px; line-height:.9}
-  .count .lbl{color:var(--muted); font-size:13px; padding-bottom:6px}
-  .count.empty .num{color:var(--line)}
-
-  button{font-family:'Inter',sans-serif; font-weight:600; font-size:15px; border:none; border-radius:9px;
-    padding:12px 16px; cursor:pointer; width:100%; transition:transform .04s ease, background .15s ease}
-  button:active{transform:translateY(1px)}
-  button:focus-visible{outline:3px solid #1C6DD055; outline-offset:2px}
-  button:disabled{cursor:not-allowed; opacity:.45}
-  .btn-find{background:var(--ink); color:#fff; margin-bottom:10px}
-  .btn-print{color:#fff}
-  .panel[data-t="flex"] .btn-print{background:var(--flex)}
-  .panel[data-t="colecta"] .btn-print{background:var(--colecta)}
-  .status{font-size:13px; margin-top:10px; min-height:18px}
-  .status.err{color:var(--err)} .status.ok{color:var(--ok)}
-
-  .list{margin-top:16px; border-top:1px solid var(--line)}
-  .row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
-    padding:8px 2px; border-bottom:1px solid var(--line); font-size:13px}
-  .row .sku{font-family:'JetBrains Mono',monospace; font-weight:500}
-  .row .ti{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .row .u{color:var(--muted); font-size:12px}
-  .row .mini{font-size:12px; padding:6px 10px; width:auto; background:#F0EEE6; color:var(--ink); border-radius:7px}
-  .group-h{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:16px 0 4px; font-weight:600}
-  details{margin-top:14px}
-  details summary{cursor:pointer; font-size:13px; color:var(--warn); font-weight:600}
-  .pill{font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px; border-radius:20px; background:#F0EEE6; color:var(--muted)}
-
-  .reprint{margin-top:22px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px}
-  .reprint h2{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:22px; margin:0 0 14px}
-  .totals{display:flex; gap:24px; flex-wrap:wrap; margin-bottom:8px}
-  .total-box .n{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:38px; line-height:1}
-  .total-box .l{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
-  .reprint-actions{display:flex; gap:10px; flex-wrap:wrap; margin:14px 0}
-  /* Panel vivo */
+  /* ===== PANEL VIVO / IMPRIMIR ===== */
   .vivo-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px}
-  .vivo-estado{font-size:13px; color:var(--muted)}
-  .vivo-estado .vivo-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ok); margin-right:6px; vertical-align:middle}
-  .vivo-refresh{width:auto; padding:8px 14px; font-size:13px; background:#F0EEE6; color:var(--ink)}
-  .panel-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
-  .btn-sel{background:#F0EEE6; color:var(--ink)}
-  .lista-sel{margin-top:12px; max-height:340px; overflow:auto}
-  .lista-sel .selrow{display:grid; grid-template-columns:auto auto 1fr auto auto; gap:10px; align-items:center;
-    padding:7px 4px; border-bottom:1px solid var(--line); font-size:13px}
-  .lista-sel .selrow input[type=checkbox]{width:17px; height:17px; cursor:pointer}
-  .lista-sel .selrow .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
-  .lista-sel .selrow .ti{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .lista-sel .selrow .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
-  .lista-sel .selrow .u{color:var(--muted)}
-  .lista-sel .selhead{display:flex; align-items:center; gap:8px; padding:6px 4px; font-size:12px; color:var(--muted)}
-  .lista-sel .selhead label{display:flex; align-items:center; gap:6px; cursor:pointer}
-  .reprint-actions button{width:auto; padding:10px 14px; font-size:14px; background:#F0EEE6; color:var(--ink)}
-  .reimp-venta{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 10px}
-  .reimp-venta input{flex:1; min-width:220px; padding:10px 12px; border:1px solid var(--line);
-    border-radius:9px; font-size:14px; font-family:'JetBrains Mono',monospace}
-  .reimp-venta button{width:auto; padding:10px 16px; font-size:14px; background:var(--ink); color:#fff}
+  .vivo-estado{font-size:13px; color:var(--muted2); display:flex; align-items:center; gap:7px}
+  .vivo-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ok)}
+  .vivo-refresh{padding:8px 14px; font-size:13px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; color:var(--ink); font-weight:600}
 
-  .colectas-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px}
-  @media(max-width:720px){.colectas-grid{grid-template-columns:1fr}}
-  .ccard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; border-left:5px solid var(--colecta)}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); overflow:hidden; border-top:3px solid var(--line2)}
+  .panel[data-t="flex"]{border-top-color:var(--flex)}
+  .panel[data-t="colecta"]{border-top-color:var(--colecta)}
+  .panel .body{padding:18px}
+  .panel h2{font-size:18px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px; color:var(--ink)}
+  .tipo-dot{width:11px; height:11px; border-radius:3px; background:var(--line2)}
+  .panel[data-t="flex"] .tipo-dot{background:var(--flex)}
+  .panel[data-t="colecta"] .tipo-dot{background:var(--colecta)}
+  .panel .sub{color:var(--muted); font-size:12px; margin:3px 0 14px}
+  .count{display:flex; align-items:baseline; gap:9px; margin-bottom:14px; min-height:48px}
+  .count .num{font-size:46px; font-weight:800; line-height:1; letter-spacing:-.02em}
+  .panel[data-t="flex"] .count .num{color:var(--flex)}
+  .panel[data-t="colecta"] .count .num{color:var(--colecta)}
+  .count.empty .num{color:var(--line2)}
+  .count .lbl{color:var(--muted); font-size:13px}
+  .panel-actions{display:flex; flex-direction:column; gap:8px}
+  .btn-print{width:100%; color:#fff; border:none; border-radius:8px; padding:12px; font-weight:700; font-size:15px}
+  .panel[data-t="flex"] .btn-print{background:var(--flex)} .panel[data-t="flex"] .btn-print:hover{background:var(--flex-d)}
+  .panel[data-t="colecta"] .btn-print{background:var(--colecta)} .panel[data-t="colecta"] .btn-print:hover{background:var(--colecta-d)}
+  .btn-sel{width:100%; background:var(--surface); border:1px solid var(--line2); color:var(--ink); border-radius:8px; padding:10px; font-weight:600; font-size:14px}
+  .btn-sel:hover{background:#F5F5F5}
+  .status{font-size:13px; margin-top:8px; min-height:16px; color:var(--muted2)}
+  .status.err{color:var(--err)} .status.ok{color:var(--ok)}
+  .lista-sel{margin-top:12px; max-height:320px; overflow:auto}
+  .lista-sel .selhead{display:flex; align-items:center; gap:8px; padding:6px 2px; font-size:12px; color:var(--muted2)}
+  .lista-sel .selhead label{display:flex; align-items:center; gap:6px; cursor:pointer}
+  .selrow{display:grid; grid-template-columns:auto auto 1fr auto auto; gap:10px; align-items:center;
+    padding:7px 2px; border-bottom:1px solid var(--line); font-size:13px}
+  .selrow input[type=checkbox]{width:16px; height:16px; cursor:pointer; accent-color:var(--flex)}
+  .selrow .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
+  .selrow .ti{color:var(--muted2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .selrow .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
+  .selrow .u{color:var(--muted)}
+
+  .card-box{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:18px; margin-top:16px}
+  .card-box h2{font-size:17px; font-weight:700; margin:0 0 14px; color:var(--ink)}
+  .totals{display:flex; gap:26px; flex-wrap:wrap; margin-bottom:6px}
+  .total-box .n{font-size:32px; font-weight:800; line-height:1}
+  .total-box .n.falta{color:var(--err)}
+  .total-box .l{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-top:3px}
+  .reprint-actions{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0}
+  .reprint-actions button{padding:9px 14px; font-size:13px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; color:var(--ink); font-weight:600}
+  .reprint-actions button:hover{background:#F5F5F5}
+  .reimp-venta{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 10px}
+  .reimp-venta input{flex:1; min-width:200px; padding:10px 12px; border:1px solid var(--line2); border-radius:8px; font-size:14px; font-family:'JetBrains Mono',monospace}
+  .reimp-venta button{padding:10px 16px; font-size:14px; background:var(--ink); color:#fff; border:none; border-radius:8px; font-weight:600}
+  .group-h{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:14px 0 4px; font-weight:700}
+  .list{border-top:1px solid var(--line)}
+  .row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:8px 2px; border-bottom:1px solid var(--line); font-size:13px}
+  .row.r4{grid-template-columns:auto 1fr auto auto}
+  .row .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
+  .row .ti{color:var(--muted2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
+  .row .u{color:var(--muted); font-size:12px}
+  .row .mini{font-size:12px; padding:6px 10px; background:#F0F0F0; color:var(--ink); border-radius:6px; border:none; font-weight:600}
+  .pill{font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 7px; border-radius:10px; background:#F0F0F0; color:var(--muted2)}
+
+  /* ===== DESPACHAR ===== */
+  .dcard{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:20px}
+  .dcard + .dcard, .dcard + .card-box{margin-top:16px}
+  .dcard h2{font-size:18px; font-weight:700; margin:0 0 4px; color:var(--ink)}
+  .hint{color:var(--muted2); font-size:13px; margin:0 0 14px; line-height:1.5}
+  .scan-modos{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:8px 0 12px}
+  .scan-modo-btn{padding:10px 16px; font-size:14px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; color:var(--ink2); font-weight:600}
+  .scan-modo-btn.activo{background:var(--err); color:#fff; border-color:var(--err)}
+  .scan-test{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted2); cursor:pointer}
+  .scan-test input{width:16px; height:16px; accent-color:var(--flex)}
+  .gun-label{font-size:12px; font-weight:700; color:var(--ok); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; display:flex; align-items:center; gap:6px}
+  .scan-row{display:flex; gap:8px; flex-wrap:wrap}
+  .scan-row input{flex:1; min-width:200px; padding:13px 14px; border:2px solid var(--ok); border-radius:8px; font-size:16px}
+  .scan-row .btn-scan{padding:13px 24px; background:var(--ok); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:15px}
+  #cam-wrap{margin:12px 0; max-width:360px}
+  #cam-reader{border-radius:10px; overflow:hidden; border:1px solid var(--line2)}
+  .cam-hint{font-size:13px; color:var(--muted2); margin-top:8px; text-align:center}
+  .scan-card{margin-top:14px; border-radius:10px; padding:18px 20px; color:#fff}
+  .scan-card .big{font-size:26px; font-weight:800; line-height:1.12}
+  .scan-card .det{font-size:14px; margin-top:8px; opacity:.96}
+  .scan-card .det .mono{font-family:'JetBrains Mono',monospace}
+  .scan-ok{background:var(--ok)} .scan-cancel{background:var(--err)} .scan-warn{background:var(--warn); color:#3a2a00}
+  .test-card{margin-top:12px; border-radius:10px; padding:16px 18px; background:#1F2937; color:#fff}
+  .test-card .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.05em; opacity:.7}
+  .test-card .crudo{font-family:'JetBrains Mono',monospace; font-size:14px; word-break:break-all; margin-top:6px; line-height:1.5}
+  .test-card .nums{margin-top:10px; font-size:13px; opacity:.9}
+  .card-box-actions{display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 0}
+  .card-box-actions button{padding:9px 14px; font-size:13px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; color:var(--ink); font-weight:600}
+  .colectas-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px}
+  @media(max-width:640px){.colectas-grid{grid-template-columns:1fr}}
+  .ccard{background:#FFF; border:1px solid var(--line); border-radius:10px; padding:16px; border-left:4px solid var(--colecta)}
   .ccard-pasada{opacity:.5}
-  .ccard .ch{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:10px}
-  .ccard .hora{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:26px; letter-spacing:.01em}
-  .ccard .corte{font-size:14px; color:var(--muted)}
-  .ccard .corte-alerta{color:var(--err); font-weight:600}
-  .col-proxima{font-size:11px; font-weight:700; background:var(--ok); color:#fff; padding:3px 9px; border-radius:20px; letter-spacing:.05em}
+  .ccard .ch{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:10px}
+  .ccard .hora{font-weight:800; font-size:22px; color:var(--ink)}
+  .ccard .corte{font-size:13px; color:var(--muted2)}
+  .ccard .corte-alerta{color:var(--err); font-weight:700}
+  .col-proxima{font-size:10px; font-weight:800; background:var(--ok); color:#fff; padding:3px 8px; border-radius:10px; letter-spacing:.04em}
   .col-pasada{font-size:11px; color:var(--muted); font-style:italic}
 
-  .placeholder{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:40px 24px; text-align:center; color:var(--muted)}
-  .placeholder h3{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; color:var(--ink); font-size:20px; margin:0 0 6px}
-  footer{margin-top:40px; color:var(--muted); font-size:12px; text-align:center}
-
-  /* Verificación / escaneo */
-  .scan-card{margin-top:16px; border-radius:14px; padding:22px 24px; color:#fff}
-  .scan-card .big{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
-    text-transform:uppercase; letter-spacing:.03em; font-size:34px; line-height:1.05}
-  .scan-card .det{font-size:14px; margin-top:10px; opacity:.95}
-  .scan-card .det .mono{font-family:'JetBrains Mono',monospace}
-  .scan-modos{display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:6px 0 12px}
-  .scan-modo-btn{width:auto; padding:11px 18px; font-size:15px; background:var(--ink); color:#fff}
-  .scan-modo-btn.activo{background:var(--err)}
-  .scan-test{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted); cursor:pointer}
-  .scan-test input{width:16px; height:16px}
-  #cam-wrap{margin:10px 0 16px; max-width:380px}
-  #cam-reader{border-radius:14px; overflow:hidden; border:1px solid var(--line)}
-  .cam-hint{font-size:13px; color:var(--muted); margin-top:8px; text-align:center}
-  .test-card{margin-top:14px; border-radius:14px; padding:18px 20px; background:#1F2937; color:#fff}
-  .test-card .lbl{font-size:12px; text-transform:uppercase; letter-spacing:.05em; opacity:.7}
-  .test-card .crudo{font-family:'JetBrains Mono',monospace; font-size:15px; word-break:break-all; margin-top:6px; line-height:1.5}
-  .test-card .nums{margin-top:10px; font-size:13px; opacity:.9}
-  .scan-ok{background:var(--ok)} .scan-cancel{background:var(--err)} .scan-warn{background:#B7791F}
-  .total-box .n.falta{color:var(--err)}
-  .row .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted)}
-  .row.r4{grid-template-columns:auto 1fr auto auto}
-
-  /* Seguimiento */
-  .seg-sec{background:var(--panel); border:1px solid var(--line); border-radius:14px; margin-top:14px; overflow:hidden}
-  .seg-sec summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 18px}
-  .seg-sec summary::-webkit-details-marker{display:none}
-  .seg-sec .seg-dot{width:12px; height:12px; border-radius:50%}
-  .seg-sec .seg-tit{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:17px}
-  .seg-sec .seg-n{margin-left:auto; font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:24px}
-  .seg-sec .list{margin:0 18px 14px; border-top:1px solid var(--line)}
-  /* Tarjetas tipo ML (contadores por etapa) */
-  .seg-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0}
-  .seg-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px;
-    border-top:4px solid var(--line); cursor:pointer; transition:transform .08s}
-  .seg-card:hover{transform:translateY(-2px)}
-  .seg-card .c-n{font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; font-size:34px; line-height:1}
-  .seg-card .c-l{font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:.03em}
-  /* Buscar venta */
-  .buscar-wrap{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px}
-  .buscar-wrap h2{font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px}
-  .buscar-hint{color:var(--muted); font-size:14px; margin:0 0 16px}
+  /* ===== SEGUIMIENTO + BUSCAR ===== */
+  .buscar-wrap{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:20px; margin-bottom:16px}
+  .buscar-wrap h2{font-size:17px; font-weight:700; margin:0 0 4px; color:var(--ink)}
+  .buscar-hint{color:var(--muted2); font-size:13px; margin:0 0 14px; line-height:1.5}
   .buscar-row{display:flex; gap:8px; flex-wrap:wrap}
-  .buscar-row input{flex:1; min-width:220px; padding:12px 14px; border:1px solid var(--line);
-    border-radius:9px; font-size:15px; letter-spacing:.02em}
-  .buscar-row button{width:auto; padding:12px 22px; background:var(--ink); color:#fff; border:none;
-    border-radius:9px; font-weight:600; cursor:pointer}
-  .rcard{margin-top:18px; border:1px solid var(--line); border-radius:14px; overflow:hidden}
-  .rstate{padding:14px 18px; font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
-    text-transform:uppercase; letter-spacing:.04em; font-size:17px; color:#fff}
-  .rcard-verde .rstate{background:#2E7D52} .rcard-azul .rstate{background:#2B5FA8}
-  .rcard-ambar .rstate{background:#B7791F} .rcard-rojo .rstate{background:#B23A3A}
+  .buscar-row input{flex:1; min-width:200px; padding:12px 14px; border:1px solid var(--line2); border-radius:8px; font-size:15px}
+  .buscar-row button{padding:12px 22px; background:var(--flex); color:#fff; border:none; border-radius:8px; font-weight:700}
+  .rcard{margin-top:16px; border-radius:10px; overflow:hidden; box-shadow:var(--shadow)}
+  .rstate{padding:12px 16px; font-weight:800; font-size:16px; color:#fff}
+  .rcard-verde .rstate{background:var(--ok)} .rcard-azul .rstate{background:var(--flex)}
+  .rcard-ambar .rstate{background:var(--warn); color:#3a2a00} .rcard-rojo .rstate{background:var(--err)}
   .rcard-gris .rstate{background:#6B675E}
   .rgrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line)}
-  .rgrid div{background:var(--panel); padding:12px 16px; font-size:14px}
-  .rgrid span{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em;
-    color:var(--muted); margin-bottom:3px}
-  @media(max-width:560px){ .rgrid{grid-template-columns:1fr} }
+  .rgrid div{background:var(--surface); padding:12px 16px; font-size:14px}
+  .rgrid span{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:3px}
+  @media(max-width:560px){.rgrid{grid-template-columns:1fr}}
+  .seg-head{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:4px}
+  .seg-head h2{font-size:17px; font-weight:700; margin:0; color:var(--ink)}
+  .seg-head button{padding:9px 14px; background:var(--ink); color:#fff; border:none; border-radius:8px; font-weight:600; font-size:13px}
+  .seg-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin:14px 0}
+  .seg-card{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:14px 16px; border-top:4px solid var(--line2); cursor:pointer; transition:transform .08s}
+  .seg-card:hover{transform:translateY(-2px)}
+  .seg-card .c-n{font-size:30px; font-weight:800; line-height:1}
+  .seg-card .c-l{font-size:12px; color:var(--muted2); margin-top:4px}
+  .seg-sec{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); margin-top:12px; overflow:hidden}
+  .seg-sec summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 18px}
+  .seg-sec summary::-webkit-details-marker{display:none}
+  .seg-dot{width:12px; height:12px; border-radius:50%}
+  .seg-tit{font-weight:700; font-size:15px; color:var(--ink)}
+  .seg-n{margin-left:auto; font-weight:800; font-size:22px}
+  .seg-sec .list{margin:0 18px 14px}
+
+  /* ===== DEMO (oculta) ===== */
+  .placeholder{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:24px; text-align:left}
+  .placeholder h3{font-size:18px; font-weight:700; margin:0 0 8px; color:var(--ink)}
+  .demo-actions{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0}
+  .demo-actions .b-ok{padding:11px 16px; background:var(--ok); color:#fff; border:none; border-radius:8px; font-weight:600}
+  .demo-actions .b-err{padding:11px 16px; background:var(--err); color:#fff; border:none; border-radius:8px; font-weight:600}
+
+  footer{margin-top:32px; color:var(--muted); font-size:12px; text-align:center}
+  .demolink{color:var(--muted); text-decoration:underline; cursor:pointer}
+
+  /* ===== MÓVIL: barra inferior tipo app ===== */
+  @media(max-width:640px){
+    .appbar-inner{padding:9px 14px; gap:10px}
+    .brand{font-size:17px}
+    .spacer{display:none}
+    #cb-body{order:3; width:100%; justify-content:flex-start}
+    .salir{order:2; margin-left:auto}
+    .tabs{display:none}
+    .wrap{padding:16px 14px 30px}
+    .bottombar{display:flex; position:fixed; left:0; right:0; bottom:0; z-index:30;
+      background:var(--surface); border-top:1px solid var(--line2);
+      box-shadow:0 -1px 6px rgba(0,0,0,.08); padding-bottom:env(safe-area-inset-bottom)}
+    .navbtn{flex:1; background:none; border:none; padding:8px 4px 7px; display:flex; flex-direction:column;
+      align-items:center; gap:3px; color:var(--muted); font-size:11px; font-weight:600; position:relative}
+    .navbtn svg{width:23px; height:23px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+    .navbtn.active{color:var(--flex)}
+    .navbtn .badge{position:absolute; top:3px; left:calc(50% + 5px)}
+    body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  }
 </style>
 </head>
 <body>
@@ -213,8 +246,7 @@
 <!-- ===================== LOGIN ===================== -->
 <div id="login">
   <div class="card">
-    <div class="bar"></div>
-    <h1>Despacho</h1>
+    <div class="brand-lg"><span class="dot"></span>Depósito</div>
     <div class="sub">Ingresá con tu usuario del depósito.</div>
     <label for="email">Usuario (email)</label>
     <input id="email" type="email" autocomplete="username" placeholder="usuario@pontec.com">
@@ -227,158 +259,177 @@
 </div>
 
 <!-- ===================== APP ===================== -->
-<div id="app" class="wrap" style="display:none">
-  <header class="top">
-    <h1>Despacho</h1>
-    <span class="tagline">Imprimí por SKU, reimprimí lo del día y mirá las colectas que vienen.</span>
-    <button class="salir" onclick="salir()">Salir</button>
+<div id="app" style="display:none">
+
+  <header class="appbar">
+    <div class="appbar-inner">
+      <div class="brand"><span class="dot"></span>Depósito</div>
+      <div class="spacer"></div>
+      <div class="codigo-chip" id="cb-body"></div>
+      <button class="salir" onclick="salir()">Salir</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="imprimir" onclick="verTab('imprimir')">Imprimir <span class="badge badge-imprimir" style="display:none">0</span></button>
+      <button class="tab" data-tab="despachar" onclick="verTab('despachar')">Despachar <span class="badge badge-despachar" style="display:none">0</span></button>
+      <button class="tab" data-tab="seguimiento" onclick="verTab('seguimiento')">Seguimiento</button>
+    </nav>
   </header>
 
-  <div class="tabs" role="tablist">
-    <button class="tab active" onclick="verTab('impresion', this)">Impresión</button>
-    <button class="tab" onclick="verTab('buscar', this)">Buscar venta</button>
-    <button class="tab" onclick="verTab('verificacion', this)">Verificación</button>
-    <button class="tab" onclick="verTab('seguimiento', this)">Seguimiento</button>
-    <button class="tab" onclick="verTab('camiones', this)">Camiones</button>
-    <button class="tab" onclick="verTab('demo', this)">Demo</button>
+  <div class="wrap">
+
+    <!-- ===== IMPRIMIR ===== -->
+    <section id="view-imprimir" class="view active">
+      <div class="vivo-head">
+        <div class="vivo-estado" id="vivo-estado">Cargando panel…</div>
+        <button class="vivo-refresh" onclick="cargarPanel(true)">↻ Actualizar ahora</button>
+      </div>
+      <div class="grid">
+        <section class="panel" data-t="flex"><div class="body">
+          <h2><span class="tipo-dot"></span>Flex</h2><div class="sub">Self-service · logística propia</div>
+          <div class="count" id="count-flex"><span class="num" id="num-flex">—</span><span class="lbl">para imprimir</span></div>
+          <div class="panel-actions">
+            <button class="btn-print" id="print-flex" onclick="imprimirTanda('flex')" disabled>Imprimir todas (Flex)</button>
+            <button class="btn-sel" id="printsel-flex" onclick="imprimirSeleccion('flex')" disabled>Imprimir selección</button>
+          </div>
+          <div class="status" id="status-flex"></div><div class="lista-sel" id="list-flex"></div>
+        </div></section>
+        <section class="panel" data-t="colecta"><div class="body">
+          <h2><span class="tipo-dot"></span>Colecta</h2><div class="sub">Cross-docking · lo retira Mercado Libre</div>
+          <div class="count" id="count-colecta"><span class="num" id="num-colecta">—</span><span class="lbl">para imprimir</span></div>
+          <div class="panel-actions">
+            <button class="btn-print" id="print-colecta" onclick="imprimirTanda('colecta')" disabled>Imprimir todas (Colecta)</button>
+            <button class="btn-sel" id="printsel-colecta" onclick="imprimirSeleccion('colecta')" disabled>Imprimir selección</button>
+          </div>
+          <div class="status" id="status-colecta"></div><div class="lista-sel" id="list-colecta"></div>
+        </div></section>
+      </div>
+      <div class="card-box">
+        <h2>Impresas hoy</h2>
+        <div class="totals">
+          <div class="total-box"><div class="n" id="tot-total">—</div><div class="l">Total</div></div>
+          <div class="total-box"><div class="n" id="tot-flex">—</div><div class="l">Flex</div></div>
+          <div class="total-box"><div class="n" id="tot-colecta">—</div><div class="l">Colecta</div></div>
+        </div>
+        <div class="reprint-actions">
+          <button onclick="cargarImpresas()">Actualizar</button>
+          <button onclick="reimprimirTanda('flex')">Reimprimir tanda Flex</button>
+          <button onclick="reimprimirTanda('colecta')">Reimprimir tanda Colecta</button>
+        </div>
+        <div class="reimp-venta">
+          <input id="reimp-venta-input" placeholder="N° de venta · ej. 2000016878691168"
+                 autocomplete="off" onkeydown="if(event.key==='Enter') reimprimirVenta()">
+          <button onclick="reimprimirVenta()" id="btn-reimp-venta">Reimprimir esta venta</button>
+        </div>
+        <div class="status" id="status-reprint"></div><div id="list-impresas"></div>
+      </div>
+    </section>
+
+    <!-- ===== DESPACHAR (Verificación + Colectas) ===== -->
+    <section id="view-despachar" class="view">
+      <div class="dcard">
+        <h2>Escaneá al cargar el camión</h2>
+        <p class="hint">Disparale con la <b>pistola</b> al QR de la etiqueta. El sistema chequea <b>en vivo</b> en Mercado Libre que la venta no esté cancelada antes de registrarla.</p>
+        <div class="gun-label">▸ Pistola lectora (recomendado)</div>
+        <div class="scan-row">
+          <input id="scan-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
+                 onkeydown="if(event.key==='Enter') escanear(this.value)">
+          <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Despachar</button>
+        </div>
+        <div class="scan-modos">
+          <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Usar cámara (alternativa)</button>
+          <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test (solo mostrar lo que lee)</label>
+        </div>
+        <div id="cam-wrap" style="display:none">
+          <div id="cam-reader"></div>
+          <div class="cam-hint" id="cam-hint"></div>
+        </div>
+        <div id="scan-result"></div>
+      </div>
+
+      <div class="card-box">
+        <h2>Camión de hoy</h2>
+        <div class="totals">
+          <div class="total-box"><div class="n" id="v-impresas">—</div><div class="l">Impresas</div></div>
+          <div class="total-box"><div class="n" id="v-despachadas">—</div><div class="l">Despachadas</div></div>
+          <div class="total-box"><div class="n falta" id="v-faltan">—</div><div class="l">Faltan subir</div></div>
+        </div>
+        <div class="card-box-actions"><button onclick="cargarDespachados()">↻ Actualizar</button></div>
+        <div class="status" id="status-verif"></div>
+        <div id="list-faltan"></div>
+        <div id="list-despachadas"></div>
+      </div>
+
+      <div class="card-box">
+        <div class="seg-head">
+          <h2>Colectas de hoy</h2>
+          <button onclick="cargarColectas()" style="background:var(--surface); border:1px solid var(--line2); color:var(--ink)">↻ Actualizar</button>
+        </div>
+        <p class="hint">Horarios en que Mercado Libre pasa a buscar los paquetes de <b>Colecta</b>. El <b>corte</b> es la hora límite para tener todo listo. (Flex no tiene colecta de ML: lo despachás vos.)</p>
+        <div class="status" id="status-colectas"></div><div id="colectas-list"></div>
+      </div>
+    </section>
+
+    <!-- ===== SEGUIMIENTO (+ Buscar venta) ===== -->
+    <section id="view-seguimiento" class="view">
+      <div class="buscar-wrap">
+        <h2>Buscar una venta</h2>
+        <p class="buscar-hint">Poné el número de venta (o escaneá la etiqueta) para ver si se despachó y si llegó. Busca solo ese número, no carga todo el historial.</p>
+        <div class="buscar-row">
+          <input id="buscar-input" placeholder="Número de venta · ej. 2000016878691168"
+                 autocomplete="off" onkeydown="if(event.key==='Enter') buscarVenta()">
+          <button onclick="buscarVenta()">Buscar</button>
+        </div>
+        <div class="status" id="status-buscar"></div>
+        <div id="buscar-resultado"></div>
+      </div>
+
+      <div class="seg-head">
+        <h2>Flujo por etiqueta</h2>
+        <button onclick="cargarSeguimiento()">Actualizar tablero</button>
+      </div>
+      <div class="status" id="status-seg"></div>
+      <div id="seg-cards" class="seg-cards"></div>
+      <div id="seg-board"></div>
+    </section>
+
+    <!-- ===== DEMO (oculta; se llega desde el pie) ===== -->
+    <section id="view-demo" class="view">
+      <div class="placeholder">
+        <h3>Modo demo · probar el sistema</h3>
+        <p style="color:var(--muted2); margin:0 0 4px">Crea envíos de <b>prueba</b> en la base para ensayar todo el circuito
+        (imprimir, escanear, ver el flujo, la alerta de cancelación) sin depender de que Mercado Libre tenga etiquetas liberadas.
+        Los datos de prueba están marcados como DEMO y no se mezclan con los reales.</p>
+        <div class="demo-actions">
+          <button class="b-ok" onclick="sembrarDemo()">Crear datos de prueba</button>
+          <button class="b-err" onclick="limpiarDemo()">Borrar datos de prueba</button>
+        </div>
+        <div class="status" id="status-demo"></div>
+        <div id="demo-guia"></div>
+      </div>
+    </section>
+
+    <footer>
+      Las etiquetas salen ordenadas por SKU: todas las ventas del mismo producto quedan juntas.<br>
+      <span class="demolink" onclick="verTab('demo')">modo demo</span>
+    </footer>
   </div>
 
-  <div id="codigo-banner"><div class="cb-bar"></div><div class="cb-body" id="cb-body"></div></div>
-
-  <section id="view-impresion" class="view active">
-    <div class="vivo-head">
-      <div class="vivo-estado" id="vivo-estado">Cargando panel…</div>
-      <button class="vivo-refresh" onclick="cargarPanel(true)">↻ Actualizar ahora</button>
-    </div>
-    <div class="grid">
-      <section class="panel" data-t="flex"><div class="bar"></div><div class="body">
-        <h2>Flex</h2><div class="sub">Self-service · logística propia</div>
-        <div class="count" id="count-flex"><span class="num" id="num-flex">—</span><span class="lbl">para imprimir</span></div>
-        <div class="panel-actions">
-          <button class="btn-print" id="print-flex" onclick="imprimirTanda('flex')" disabled>Imprimir todas (Flex)</button>
-          <button class="btn-sel" id="printsel-flex" onclick="imprimirSeleccion('flex')" disabled>Imprimir selección</button>
-        </div>
-        <div class="status" id="status-flex"></div><div class="lista-sel" id="list-flex"></div>
-      </div></section>
-      <section class="panel" data-t="colecta"><div class="bar"></div><div class="body">
-        <h2>Colecta</h2><div class="sub">Cross-docking · lo retira Mercado Libre</div>
-        <div class="count" id="count-colecta"><span class="num" id="num-colecta">—</span><span class="lbl">para imprimir</span></div>
-        <div class="panel-actions">
-          <button class="btn-print" id="print-colecta" onclick="imprimirTanda('colecta')" disabled>Imprimir todas (Colecta)</button>
-          <button class="btn-sel" id="printsel-colecta" onclick="imprimirSeleccion('colecta')" disabled>Imprimir selección</button>
-        </div>
-        <div class="status" id="status-colecta"></div><div class="lista-sel" id="list-colecta"></div>
-      </div></section>
-    </div>
-    <div class="reprint">
-      <h2>Impresas hoy</h2>
-      <div class="totals">
-        <div class="total-box"><div class="n" id="tot-total">—</div><div class="l">Total</div></div>
-        <div class="total-box"><div class="n" id="tot-flex">—</div><div class="l">Flex</div></div>
-        <div class="total-box"><div class="n" id="tot-colecta">—</div><div class="l">Colecta</div></div>
-      </div>
-      <div class="reprint-actions">
-        <button onclick="cargarImpresas()">Actualizar</button>
-        <button onclick="reimprimirTanda('flex')">Reimprimir tanda Flex</button>
-        <button onclick="reimprimirTanda('colecta')">Reimprimir tanda Colecta</button>
-      </div>
-      <div class="reimp-venta">
-        <input id="reimp-venta-input" placeholder="N° de venta · ej. 2000016878691168"
-               autocomplete="off" onkeydown="if(event.key==='Enter') reimprimirVenta()">
-        <button onclick="reimprimirVenta()" id="btn-reimp-venta">Reimprimir esta venta</button>
-      </div>
-      <div class="status" id="status-reprint"></div><div id="list-impresas"></div>
-    </div>
-  </section>
-
-  <section id="view-buscar" class="view">
-    <div class="buscar-wrap">
-      <h2>Buscar una venta</h2>
-      <p class="buscar-hint">Poné el número de venta (o escaneá el código de la etiqueta) para ver si se despachó y si llegó. Busca solo ese número, no carga todo el historial.</p>
-      <div class="buscar-row">
-        <input id="buscar-input" placeholder="Número de venta · ej. 2000016878691168"
-               autocomplete="off" onkeydown="if(event.key==='Enter') buscarVenta()">
-        <button onclick="buscarVenta()">Buscar</button>
-      </div>
-      <div class="status" id="status-buscar"></div>
-      <div id="buscar-resultado"></div>
-    </div>
-  </section>
-
-  <section id="view-verificacion" class="view">
-    <div class="buscar-wrap">
-      <h2>Despacho · escaneá al cargar el camión</h2>
-      <p class="buscar-hint">Escaneá el QR de la etiqueta con la <b>cámara del celu</b> o con la <b>pistola lectora</b>.
-      Antes de registrar, el sistema chequea <b>en vivo</b> en Mercado Libre que la venta no esté cancelada.</p>
-
-      <div class="scan-modos">
-        <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
-        <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test (solo mostrar lo que lee, no despachar)</label>
-      </div>
-      <div id="cam-wrap" style="display:none">
-        <div id="cam-reader"></div>
-        <div class="cam-hint" id="cam-hint"></div>
-      </div>
-
-      <div class="buscar-row">
-        <input id="scan-input" placeholder="…o dispará con la pistola acá" autocomplete="off"
-               onkeydown="if(event.key==='Enter') escanear(this.value)">
-        <button onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Despachar</button>
-      </div>
-      <div id="scan-result"></div>
-    </div>
-    <div class="reprint">
-      <h2>Camión de hoy</h2>
-      <div class="totals">
-        <div class="total-box"><div class="n" id="v-impresas">—</div><div class="l">Impresas</div></div>
-        <div class="total-box"><div class="n" id="v-despachadas">—</div><div class="l">Despachadas</div></div>
-        <div class="total-box"><div class="n falta" id="v-faltan">—</div><div class="l">Faltan subir</div></div>
-      </div>
-      <div class="reprint-actions"><button onclick="cargarDespachados()">Actualizar</button></div>
-      <div class="status" id="status-verif"></div>
-      <div id="list-faltan"></div>
-      <div id="list-despachadas"></div>
-    </div>
-  </section>
-
-  <section id="view-seguimiento" class="view">
-    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px">
-      <h2 style="font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0">Flujo por etiqueta</h2>
-      <button style="width:auto; padding:10px 16px; background:var(--ink); color:#fff" onclick="cargarSeguimiento()">Actualizar tablero</button>
-    </div>
-    <div class="status" id="status-seg"></div>
-    <div id="seg-cards" class="seg-cards"></div>
-    <div id="seg-board"></div>
-  </section>
-
-  <section id="view-demo" class="view">
-    <div class="placeholder" style="text-align:left">
-      <h3>Modo demo · probar el sistema</h3>
-      <p style="color:var(--muted); margin:0 0 16px">Crea envíos de <b>prueba</b> en la base para que puedas ensayar todo el circuito
-      (imprimir, escanear, ver el flujo, la alerta de cancelación) sin depender de que Mercado Libre tenga etiquetas liberadas.
-      Los datos de prueba están marcados como DEMO y no se mezclan con los reales.</p>
-      <div class="reprint-actions">
-        <button style="background:var(--ok); color:#fff" onclick="sembrarDemo()">Crear datos de prueba</button>
-        <button style="background:var(--err); color:#fff" onclick="limpiarDemo()">Borrar datos de prueba</button>
-      </div>
-      <div class="status" id="status-demo"></div>
-      <div id="demo-guia"></div>
-    </div>
-  </section>
-
-  <section id="view-camiones" class="view">
-    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px">
-      <h2 style="font-family:'Barlow Semi Condensed',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0">Colectas de hoy</h2>
-      <button style="width:auto; padding:10px 16px; background:#F0EEE6; color:var(--ink)" onclick="cargarColectas()">↻ Actualizar</button>
-    </div>
-    <p class="buscar-hint">Horarios en que Mercado Libre pasa a buscar los paquetes de <b>Colecta</b>.
-    El <b>corte</b> es la hora límite para tener todo listo. (Flex no tiene colecta de ML: lo despachás vos.)</p>
-    <div class="status" id="status-colectas"></div><div id="colectas-list"></div>
-  </section>
-
-  <footer>Las etiquetas salen ordenadas por SKU: todas las ventas del mismo producto quedan juntas.</footer>
+  <!-- Barra inferior (solo celular) -->
+  <nav class="bottombar" role="tablist">
+    <button class="navbtn active" data-tab="imprimir" onclick="verTab('imprimir')">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Imprimir<span class="badge badge-imprimir" style="display:none">0</span>
+    </button>
+    <button class="navbtn" data-tab="despachar" onclick="verTab('despachar')">
+      <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Despachar<span class="badge badge-despachar" style="display:none">0</span>
+    </button>
+    <button class="navbtn" data-tab="seguimiento" onclick="verTab('seguimiento')">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Seguimiento
+    </button>
+  </nav>
 </div>
-
 <script>
   const API = "https://depositoml-backend-production.up.railway.app";
 
@@ -468,7 +519,7 @@
     // Auto-refresco cada 30s (solo cuando la pestaña de impresión está visible)
     if(_panelTimer) clearInterval(_panelTimer);
     _panelTimer = setInterval(()=>{
-      const vivo = document.getElementById('view-impresion');
+      const vivo = document.getElementById('view-imprimir');
       if(vivo && vivo.classList.contains('active') && !document.hidden) cargarPanel();
     }, 30000);
   }
@@ -478,17 +529,25 @@
   }
   async function salir(){ if(sb) await sb.auth.signOut(); mostrarLogin(); }
 
-  function verTab(name, btn){
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
+  function verTab(name){
+    // marca activa tanto en la nav de arriba (desktop) como en la barra de abajo (celu)
+    document.querySelectorAll('.tab, .navbtn').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('[data-tab="'+name+'"]').forEach(t => t.classList.add('active'));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-'+name).classList.add('active');
-    document.getElementById('codigo-banner').style.display =
-      (name === 'verificacion' || name === 'camiones') ? 'block' : 'none';
-    if(name === 'verificacion'){ cargarDespachados(); setTimeout(()=>document.getElementById('scan-input').focus(), 50); }
-    else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Verificación
-    if(name === 'camiones'){ cargarColectas(); }
+    const v = document.getElementById('view-'+name);
+    if(v) v.classList.add('active');
+    if(name === 'despachar'){
+      cargarDespachados(); cargarColectas();
+      setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
+    } else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Despachar
     if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
+    window.scrollTo(0, 0);
+  }
+  // Contadores numéricos en las pestañas (estilo ML)
+  function setBadge(tab, n){
+    document.querySelectorAll('.badge-'+tab).forEach(b=>{
+      if(n>0){ b.textContent = n; b.style.display=''; } else { b.style.display='none'; }
+    });
   }
 
   // ---------- Código de autorización ----------
@@ -499,16 +558,18 @@
   }
   function renderCodigo(editar){
     const box = document.getElementById('cb-body');
+    if(!box) return;
     if(codigoActual && codigoActual.es_de_hoy && !editar){
-      box.innerHTML = `<div><div class="cb-label">Código de autorización · hoy</div>
-        <span class="cb-code">${esc(codigoActual.codigo)}</span></div>
-        <button class="link" onclick="renderCodigo(true)">cambiar</button>`;
+      box.innerHTML = `<span class="cc-label">Código de hoy</span>
+        <span class="cc-code">${esc(codigoActual.codigo)}</span>
+        <button class="cc-edit" onclick="renderCodigo(true)">cambiar</button>`;
+      box.classList.remove('cc-falta');
     } else {
-      const aviso = (codigoActual && !codigoActual.es_de_hoy)
-        ? `<div class="cb-old">El código guardado es del ${esc(codigoActual.fecha)}. Cargá el de hoy.</div>` : '';
-      box.innerHTML = `<div><div class="cb-label">Código de autorización del día</div>${aviso}</div>
-        <input id="cb-input" maxlength="20" placeholder="Ej. 16BE990F">
-        <button onclick="guardarCodigo()">Guardar</button>`;
+      const viejo = (codigoActual && !codigoActual.es_de_hoy);
+      box.classList.toggle('cc-falta', !!viejo);
+      box.innerHTML = `<span class="cc-label${viejo?' cc-old':''}">${viejo?'Falta el código de hoy':'Código del día'}</span>
+        <input id="cb-input" maxlength="20" placeholder="Ej. 16BE990F" onkeydown="if(event.key==='Enter') guardarCodigo()">
+        <button class="cc-save" onclick="guardarCodigo()">Guardar</button>`;
     }
   }
   async function guardarCodigo(){
@@ -612,6 +673,7 @@
 
   function pintarTanda(tipo){
     const arr = _panelData[tipo] || [];
+    setBadge('imprimir', (_panelData.flex||[]).length + (_panelData.colecta||[]).length);
     document.getElementById('num-'+tipo).textContent = arr.length;
     const cnt = document.getElementById('count-'+tipo);
     cnt.className = 'count' + (arr.length ? '' : ' empty');
@@ -868,6 +930,7 @@
       document.getElementById('v-impresas').textContent=d.impresas_hoy;
       document.getElementById('v-despachadas').textContent=d.despachadas_hoy;
       document.getElementById('v-faltan').textContent=d.faltan_cnt;
+      setBadge('despachar', d.faltan_cnt||0);
       let html='';
       if(d.faltan.length){
         html+=`<div class="group-h">Impresas hoy que faltan subir al camión</div><div class="list">`;
