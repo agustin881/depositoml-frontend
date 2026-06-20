@@ -983,7 +983,6 @@
   let _destinoActivo = null;
   let _destinosData = { abiertos: [], colectas: [], transportistas: [], max_abiertos: 2 };
   let _camionesData = [];
-  let _pickerHorario = null;
 
   async function cargarDestinos(){
     const st = document.getElementById('status-destinos');
@@ -1032,19 +1031,14 @@
     if(abiertos.length >= max){
       opt = `<div class="opt-tope">Ya hay ${max} destinos abiertos. Cerrá uno para abrir otro.</div>`;
     } else {
-      const colAbiertas = abiertos.filter(d=>d.tipo==='colecta').map(d=>d.colecta_horario);
       const flexAbiertos = abiertos.filter(d=>d.tipo==='flex').map(d=>d.transportista);
-      const colectas = (_destinosData.colectas || []).filter(c => !colAbiertas.includes(c.horario));
       const transp = (_destinosData.transportistas || []).filter(t => !flexAbiertos.includes(t));
-      if(colectas.length){
-        opt += `<div class="opciones-h">Colectas de ML</div>`;
-        for(const c of colectas){
-          opt += `<div class="opt-row"><span class="opt-ico opt-ico-colecta"></span>
-            <div><div class="opt-nombre">Colecta ${esc(c.horario)}</div>
-            <div class="opt-meta">${c.cutoff?('corte '+esc(c.cutoff)):''}</div></div>
-            <button class="btn-abrir" onclick="abrirColecta('${esc(c.horario)}')">Abrir</button></div>`;
-        }
-      }
+      // Colectas: se crean a demanda y se numeran solas (Colecta 1, Colecta 2, …)
+      opt += `<div class="opciones-h">Colectas de ML</div>`;
+      opt += `<div class="opt-row"><span class="opt-ico opt-ico-colecta"></span>
+        <div><div class="opt-nombre">Crear nueva colecta</div>
+        <div class="opt-meta">se le asigna un camión (patente)</div></div>
+        <button class="btn-abrir" onclick="abrirColecta()">Abrir</button></div>`;
       if(transp.length){
         opt += `<div class="opciones-h">Transportistas Flex</div>`;
         for(const t of transp){
@@ -1052,9 +1046,6 @@
             <div><div class="opt-nombre">${esc(t)}</div><div class="opt-meta">se le entregan los paquetes</div></div>
             <button class="btn-abrir" onclick="abrirFlex('${esc(t)}')">Abrir</button></div>`;
         }
-      }
-      if(!colectas.length && !transp.length && !abiertos.length){
-        opt = `<div class="opt-tope">Hoy no hay colectas de ML programadas. Podés abrir un transportista Flex si aparece arriba, o revisá más tarde.</div>`;
       }
     }
     document.getElementById('destinos-opciones').innerHTML = opt;
@@ -1100,18 +1091,17 @@
     }catch(e){ _camionesData = []; }
   }
 
-  async function abrirColecta(horario){
-    _pickerHorario = horario;
+  async function abrirColecta(){
     await cargarCamiones();
-    renderPicker(horario, null);
+    renderPicker(null);
   }
 
-  function renderPicker(horario, preselectId){
+  function renderPicker(preselectId){
     const opts = _camionesData.map(c =>
       `<option value="${c.id}"${String(c.id)===String(preselectId)?' selected':''}>${esc(c.patente)}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
     const m = document.getElementById('camion-picker');
     m.innerHTML = `<div class="cp-box">
-      <h3>Asignar camión · Colecta ${esc(horario)}</h3>
+      <h3>Asignar camión · Nueva colecta</h3>
       <label>Elegí un camión guardado</label>
       <select id="cp-select">${opts || '<option value="">— todavía no guardaste camiones —</option>'}</select>
       <div class="cp-or">— o cargá uno nuevo —</div>
@@ -1142,7 +1132,7 @@
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo guardar');
       await cargarCamiones();
-      renderPicker(_pickerHorario, d.camion ? d.camion.id : null);  // re-render con el nuevo elegido
+      renderPicker(d.camion ? d.camion.id : null);  // re-render con el nuevo elegido
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
@@ -1154,7 +1144,7 @@
     try{
       const r = await authFetch(`${API}/api/despacho/destinos/abrir`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ tipo:'colecta', colecta_horario:_pickerHorario, camion_id:camionId }) });
+        body: JSON.stringify({ tipo:'colecta', camion_id:camionId }) });
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo abrir');
       if(d.destino) _destinoActivo = d.destino.id;
