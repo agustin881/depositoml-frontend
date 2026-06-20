@@ -1,4 +1,4 @@
-}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -151,8 +151,15 @@
   .scan-test input{width:16px; height:16px; accent-color:var(--flex)}
   .gun-label{font-size:12px; font-weight:700; color:var(--ok); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; display:flex; align-items:center; gap:6px}
   .scan-row{display:flex; gap:8px; flex-wrap:wrap}
-  .scan-row input{flex:1; min-width:200px; padding:13px 14px; border:2px solid var(--ok); border-radius:8px; font-size:16px}
-  .scan-row .btn-scan{padding:13px 24px; background:var(--ok); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:15px}
+  .scan-row input{flex:1; min-width:180px; max-width:380px; padding:10px 14px; border:2px solid var(--ok); border-radius:8px; font-size:15px}
+  .scan-row .btn-scan{padding:10px 22px; background:var(--ok); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:15px}
+  .scan-stats{display:flex; gap:14px; margin:14px 0 4px}
+  .stat-box{flex:1; background:#fff; border:1px solid var(--line2); border-radius:12px; padding:8px 16px; text-align:center}
+  .stat-box.stat-esc{border-color:#9fe3bf} .stat-box.stat-pend{border-color:#f3b1b6}
+  .stat-n{font-size:56px; font-weight:800; line-height:1}
+  .stat-esc .stat-n{color:var(--ok)} .stat-pend .stat-n{color:var(--err)}
+  .stat-l{font-size:12px; color:var(--muted2); text-transform:uppercase; letter-spacing:.04em; margin-top:4px; font-weight:600}
+  @media(max-width:480px){ .stat-n{font-size:46px} }
   #cam-wrap{position:relative; margin:12px 0; max-width:360px}
   #cam-reader{border-radius:10px; overflow:hidden; border:1px solid var(--line2)}
   .cam-hint{font-size:13px; color:var(--muted2); margin-top:8px; text-align:center}
@@ -392,7 +399,10 @@
                  onkeydown="if(event.key==='Enter') escanear(this.value)">
           <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Cargar</button>
         </div>
-        <div class="scan-contador">✓ <b id="scan-cont-n">0</b> escaneados en esta sesión</div>
+        <div class="scan-stats">
+          <div class="stat-box stat-esc"><div class="stat-n" id="stat-esc-n">0</div><div class="stat-l">escaneados</div></div>
+          <div class="stat-box stat-pend"><div class="stat-n" id="stat-pend-n">—</div><div class="stat-l" id="stat-pend-l">faltan</div></div>
+        </div>
         <div class="scan-modos">
           <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
           <button id="btn-luz" class="scan-modo-btn" onclick="toggleLuz()" style="display:none">💡 Luz</button>
@@ -992,7 +1002,11 @@
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br>
           Se escaneó el ${d.despachado_at?new Date(d.despachado_at).toLocaleString('es-AR'):'—'}${d.usuario?' por '+esc(d.usuario):''}.</div></div>`;
       } else {
-        beep(false); flashCam('ok'); _scanCount++; setContador();
+        beep(false); flashCam('ok');
+        // Suma optimista al tipo del destino activo (se corrige al refrescar)
+        const t = tipoDestinoActivo();
+        if(t && _porTipo[t]){ _porTipo[t].escaneadas++; _porTipo[t].pendientes = Math.max(0, _porTipo[t].pendientes - 1); }
+        pintarStats();
         const conAviso = (d.resultado === 'ok_aviso') && d.aviso;
         const dest = d.destino_nombre ? ` → <b>${esc(d.destino_nombre)}</b>` : '';
         out.innerHTML=`<div class="scan-card ${conAviso?'scan-warn':'scan-ok'}"><div class="big">✓ Cargada${conAviso?' · revisá' : ''}</div>
@@ -1016,6 +1030,8 @@
       document.getElementById('v-despachadas').textContent=d.despachadas_hoy;
       document.getElementById('v-faltan').textContent=d.faltan_cnt;
       setBadge('despachar', d.faltan_cnt||0);
+      if(d.por_tipo) _porTipo = d.por_tipo;
+      pintarStats();
       let html='';
       if(d.faltan.length){
         html+=`<div class="group-h">Impresas hoy que faltan subir al camión</div><div class="list">`;
@@ -1041,13 +1057,34 @@
 
   // ---------- Centro de despacho: destinos + camiones (Parte 2) ----------
   let _destinoActivo = null;
-  let _scanCount = 0;
   let _flashTimer = null;
-  function setContador(){
-    const a = document.getElementById('scan-cont-n'); if(a) a.textContent = _scanCount;
-    const b = document.getElementById('cam-cont-n'); if(b) b.textContent = _scanCount;
+  // Conteo por tipo (Colecta / Flex): impresas, escaneadas y pendientes del día
+  let _porTipo = { flex: {impresas:0,escaneadas:0,pendientes:0}, colecta: {impresas:0,escaneadas:0,pendientes:0} };
+  function tipoDestinoActivo(){
+    const dd = (_destinosData.abiertos || []).find(x => x.id === _destinoActivo);
+    return dd ? dd.tipo : null;
   }
-  function reiniciarContador(){ _scanCount = 0; setContador(); }
+  // Pinta los dos números grandes (escaneados verde / faltan rojo) según el tipo del destino activo
+  function pintarStats(){
+    const t = tipoDestinoActivo();
+    const esc = document.getElementById('stat-esc-n');
+    const pen = document.getElementById('stat-pend-n');
+    const penL = document.getElementById('stat-pend-l');
+    const cam = document.getElementById('cam-cont-n');
+    if(!t){
+      if(esc) esc.textContent = '0';
+      if(pen) pen.textContent = '—';
+      if(penL) penL.textContent = 'faltan';
+      if(cam) cam.textContent = '0';
+      return;
+    }
+    const d = _porTipo[t] || { escaneadas:0, pendientes:0 };
+    const nombre = t === 'colecta' ? 'Colecta' : 'Flex';
+    if(esc) esc.textContent = d.escaneadas || 0;
+    if(pen) pen.textContent = d.pendientes || 0;
+    if(penL) penL.textContent = 'faltan · ' + nombre;
+    if(cam) cam.textContent = d.escaneadas || 0;
+  }
   // Destello grande sobre la cámara: verde ✓ (ok), rojo ✗ (cancelada/error), ámbar ! (duplicada)
   function flashCam(tipo){
     const f = document.getElementById('cam-flash'); if(!f) return;
@@ -1125,6 +1162,7 @@
     }
     document.getElementById('destinos-opciones').innerHTML = opt;
     pintarBarraDestino();
+    pintarStats();
   }
 
   function pintarBarraDestino(){
@@ -1142,7 +1180,7 @@
 
   function seleccionarDestino(id){
     _destinoActivo = id;
-    reiniciarContador();
+    pintarStats();
     renderDestinos();
     const i = document.getElementById('scan-input'); if(i) i.focus();
   }
@@ -1155,7 +1193,7 @@
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo abrir');
       if(d.destino) _destinoActivo = d.destino.id;
-      reiniciarContador();
+      pintarStats();
       await cargarDestinos();
       const i = document.getElementById('scan-input'); if(i) i.focus();
     }catch(e){ alert('Error: ' + e.message); }
@@ -1226,7 +1264,7 @@
       if(!r.ok) throw new Error(d.error || 'No se pudo abrir');
       if(d.destino) _destinoActivo = d.destino.id;
       cerrarPicker();
-      reiniciarContador();
+      pintarStats();
       await cargarDestinos();
       const i = document.getElementById('scan-input'); if(i) i.focus();
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
