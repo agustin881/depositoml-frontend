@@ -178,6 +178,52 @@
   .col-proxima{font-size:10px; font-weight:800; background:var(--ok); color:#fff; padding:3px 8px; border-radius:10px; letter-spacing:.04em}
   .col-pasada{font-size:11px; color:var(--muted); font-style:italic}
 
+  /* Centro de despacho (Parte 2) */
+  .destino-bar{border-radius:8px; padding:11px 14px; font-size:14px; font-weight:600; margin-bottom:12px}
+  .destino-bar-vacio{background:#F5F5F5; color:var(--muted2); border:1px dashed var(--line2)}
+  .destino-bar-flex{background:#E8F1FE; color:var(--flex-d); border:1px solid #BBD6FB}
+  .destino-bar-colecta{background:#FDF0E4; color:var(--colecta-d); border:1px solid #F6CFA3}
+  .btn-light{padding:9px 14px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; color:var(--ink); font-weight:600; font-size:13px}
+  .btn-light:hover{background:#F5F5F5}
+  .btn-pri{padding:10px 16px; background:var(--flex); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:14px}
+  .destinos-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:6px 0 4px}
+  @media(max-width:640px){.destinos-grid{grid-template-columns:1fr}}
+  .dest-card{background:#fff; border:1px solid var(--line2); border-radius:10px; padding:15px; border-left:4px solid var(--line2)}
+  .dest-card.dest-flex{border-left-color:var(--flex)}
+  .dest-card.dest-colecta{border-left-color:var(--colecta)}
+  .dest-card.dest-activo{box-shadow:0 0 0 2px var(--flex); border-color:var(--flex)}
+  .dest-top{display:flex; align-items:center; gap:8px; margin-bottom:4px}
+  .dest-badge{font-size:10px; font-weight:800; padding:2px 8px; border-radius:10px; color:#fff; letter-spacing:.04em}
+  .dest-badge-flex{background:var(--flex)} .dest-badge-colecta{background:var(--colecta)}
+  .dest-nombre{font-weight:700; font-size:15px; color:var(--ink)}
+  .dest-sub{font-size:12px; color:var(--muted2); margin-bottom:8px}
+  .dest-count{display:flex; align-items:baseline; gap:6px; margin-bottom:12px}
+  .dest-n{font-size:34px; font-weight:800; line-height:1; color:var(--ink)}
+  .dest-count span:last-child{font-size:12px; color:var(--muted)}
+  .dest-actions{display:flex; gap:8px}
+  .btn-scan-here{flex:1; padding:9px; background:var(--surface); border:1px solid var(--flex); color:var(--flex); border-radius:8px; font-weight:700; font-size:13px}
+  .btn-scan-here.on{background:var(--flex); color:#fff}
+  .btn-close-dest{padding:9px 12px; background:var(--surface); border:1px solid var(--line2); color:var(--muted2); border-radius:8px; font-weight:600; font-size:13px}
+  .opciones-h{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; margin:16px 0 8px}
+  .opt-row{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; background:#fff}
+  .opt-ico{width:9px; height:9px; border-radius:3px}
+  .opt-ico-flex{background:var(--flex)} .opt-ico-colecta{background:var(--colecta)}
+  .opt-nombre{font-weight:600; font-size:14px}
+  .opt-meta{font-size:12px; color:var(--muted)}
+  .opt-row .btn-abrir{margin-left:auto; padding:8px 16px; background:var(--ink); color:#fff; border:none; border-radius:8px; font-weight:600; font-size:13px}
+  .opt-tope{font-size:13px; color:var(--muted2); background:#F5F5F5; border-radius:8px; padding:10px 12px}
+
+  .camion-picker{position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:20px}
+  .cp-box{background:#fff; border-radius:14px; padding:22px; width:100%; max-width:420px; box-shadow:0 8px 40px rgba(0,0,0,.2)}
+  .cp-box h3{font-size:17px; font-weight:700; margin:0 0 14px; color:var(--ink)}
+  .cp-box label{display:block; font-size:12px; color:var(--muted2); font-weight:600; margin-bottom:5px}
+  .cp-box select{width:100%; padding:11px 12px; border:1px solid var(--line2); border-radius:8px; font-size:15px; font-family:inherit; background:#fff}
+  .cp-or{text-align:center; color:var(--muted); font-size:12px; margin:14px 0 8px}
+  .cp-new{display:flex; gap:8px; flex-wrap:wrap}
+  .cp-new input{flex:1; min-width:120px; padding:10px 12px; border:1px solid var(--line2); border-radius:8px; font-size:14px}
+  .cp-new input#cp-pat{font-family:'JetBrains Mono',monospace; text-transform:uppercase}
+  .cp-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:18px}
+
   /* ===== SEGUIMIENTO + BUSCAR ===== */
   .buscar-wrap{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:20px; margin-bottom:16px}
   .buscar-wrap h2{font-size:17px; font-weight:700; margin:0 0 4px; color:var(--ink)}
@@ -324,16 +370,15 @@
       </div>
     </section>
 
-    <!-- ===== DESPACHAR (Verificación + Colectas) ===== -->
+    <!-- ===== DESPACHAR (centro de despacho · Parte 2) ===== -->
     <section id="view-despachar" class="view">
       <div class="dcard">
-        <h2>Escaneá al cargar el camión</h2>
-        <p class="hint">Disparale con la <b>pistola</b> al QR de la etiqueta. El sistema chequea <b>en vivo</b> en Mercado Libre que la venta no esté cancelada antes de registrarla.</p>
+        <div id="destino-bar" class="destino-bar destino-bar-vacio">Elegí o abrí un destino abajo para empezar a cargar paquetes.</div>
         <div class="gun-label">▸ Pistola lectora (recomendado)</div>
         <div class="scan-row">
           <input id="scan-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
                  onkeydown="if(event.key==='Enter') escanear(this.value)">
-          <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Despachar</button>
+          <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Cargar</button>
         </div>
         <div class="scan-modos">
           <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Usar cámara (alternativa)</button>
@@ -346,11 +391,22 @@
         <div id="scan-result"></div>
       </div>
 
+      <div class="dcard">
+        <div class="seg-head">
+          <h2>Destinos de despacho</h2>
+          <button class="btn-light" onclick="cargarDestinos()">↻ Actualizar</button>
+        </div>
+        <p class="hint">Abrí hasta <b>2 destinos</b> a la vez. La <b>Colecta</b> lleva un camión (patente); a los transportistas <b>Flex</b> (Ruedo, Gustavo) se les entregan los paquetes. Escaneá cada paquete al destino que corresponde — no deja mezclar Flex con Colecta.</p>
+        <div class="status" id="status-destinos"></div>
+        <div id="destinos-abiertos"></div>
+        <div id="destinos-opciones"></div>
+      </div>
+
       <div class="card-box">
-        <h2>Camión de hoy</h2>
+        <h2>Resumen del día</h2>
         <div class="totals">
           <div class="total-box"><div class="n" id="v-impresas">—</div><div class="l">Impresas</div></div>
-          <div class="total-box"><div class="n" id="v-despachadas">—</div><div class="l">Despachadas</div></div>
+          <div class="total-box"><div class="n" id="v-despachadas">—</div><div class="l">Escaneadas</div></div>
           <div class="total-box"><div class="n falta" id="v-faltan">—</div><div class="l">Faltan subir</div></div>
         </div>
         <div class="card-box-actions"><button onclick="cargarDespachados()">↻ Actualizar</button></div>
@@ -359,14 +415,7 @@
         <div id="list-despachadas"></div>
       </div>
 
-      <div class="card-box">
-        <div class="seg-head">
-          <h2>Colectas de hoy</h2>
-          <button onclick="cargarColectas()" style="background:var(--surface); border:1px solid var(--line2); color:var(--ink)">↻ Actualizar</button>
-        </div>
-        <p class="hint">Horarios en que Mercado Libre pasa a buscar los paquetes de <b>Colecta</b>. El <b>corte</b> es la hora límite para tener todo listo. (Flex no tiene colecta de ML: lo despachás vos.)</p>
-        <div class="status" id="status-colectas"></div><div id="colectas-list"></div>
-      </div>
+      <div id="camion-picker" class="camion-picker" style="display:none"></div>
     </section>
 
     <!-- ===== SEGUIMIENTO (+ Buscar venta) ===== -->
@@ -537,7 +586,7 @@
     const v = document.getElementById('view-'+name);
     if(v) v.classList.add('active');
     if(name === 'despachar'){
-      cargarDespachados(); cargarColectas();
+      cargarDestinos(); cargarDespachados();
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
     } else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Despachar
     if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
@@ -583,37 +632,6 @@
       if(!r.ok) throw new Error(d.error || 'No se pudo guardar');
       codigoActual = d; renderCodigo();
     }catch(e){ alert('Error: ' + e.message); box.querySelector('button').disabled = false; }
-  }
-
-  // ---------- Colectas ----------
-  async function cargarColectas(){
-    const st = document.getElementById('status-colectas'), list = document.getElementById('colectas-list');
-    st.className='status'; st.textContent='Consultando las colectas del día en Mercado Libre…'; list.innerHTML='';
-    try{
-      const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
-      if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
-      const colectas = (d.colectas || []).filter(c => c.tanda === 'colecta');
-      if(!colectas.length){ st.textContent='No hay colectas programadas para hoy.'; return; }
-      st.textContent='';
-      // Hora actual ART (HH:MM) para marcar pasadas / próxima
-      const ahora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'America/Argentina/Buenos_Aires'});
-      let proximaMarcada = false;
-      let html = `<div class="colectas-grid">`;
-      for(const c of colectas){
-        const pasada = c.to && c.to < ahora;
-        let etiqueta = '';
-        if(pasada){ etiqueta = '<span class="col-pasada">ya pasó</span>'; }
-        else if(!proximaMarcada){ etiqueta = '<span class="col-proxima">PRÓXIMA</span>'; proximaMarcada = true; }
-        const cerca = !pasada && c.cutoff && c.cutoff <= ahora; // ya pasó el corte pero no la colecta
-        html += `<div class="ccard${pasada?' ccard-pasada':''}">
-          <div class="ch"><span class="hora">${esc(c.from)}–${esc(c.to)}</span>${etiqueta}</div>
-          <div class="corte${cerca?' corte-alerta':''}">Corte: <b>${esc(c.cutoff)||'—'}</b>${cerca?' · ¡ya pasó el corte!':''}</div>
-        </div>`;
-      }
-      html += `</div>`;
-      html += `<p class="buscar-hint" style="margin-top:14px">Mercado Libre no informa por API el transportista ni la patente de cada colecta, solo el horario.</p>`;
-      list.innerHTML = html;
-    }catch(e){ st.className='status err'; st.textContent='Error: ' + e.message; }
   }
 
   // ---------- PANEL VIVO ----------
@@ -894,7 +912,7 @@
     out.innerHTML=`<div class="status">Chequeando la venta en Mercado Libre…</div>`;
     try{
       const r=await authFetch(`${API}/api/despacho/despachar`,{
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo})});
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo, destino_id:_destinoActivo})});
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo verificar');
       if(d.resultado==='cancelada'){
@@ -902,6 +920,12 @@
         out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">⛔ No despachar · cancelada</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
           Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> — bajala del camión y apartala.</div></div>`;
+      } else if(d.resultado==='tipo_incorrecto'){
+        beep(true);
+        out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">⛔ Destino equivocado</div>
+          <div class="det">Este paquete es <b>${esc((d.recibido||'').toUpperCase())}</b> y el destino abierto es <b>${esc((d.esperado||'').toUpperCase())}</b>.<br>
+          <b>${esc(d.sku)||'SIN SKU'}</b> · Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br>
+          Cargalo al destino que corresponde.</div></div>`;
       } else if(d.resultado==='duplicada'){
         beep(true);
         out.innerHTML=`<div class="scan-card scan-warn"><div class="big">Ya estaba escaneada</div>
@@ -910,10 +934,11 @@
       } else {
         beep(false);
         const conAviso = (d.resultado === 'ok_aviso') && d.aviso;
-        out.innerHTML=`<div class="scan-card ${conAviso?'scan-warn':'scan-ok'}"><div class="big">✓ Despachada${conAviso?' · revisá' : ''}</div>
+        const dest = d.destino_nombre ? ` → <b>${esc(d.destino_nombre)}</b>` : '';
+        out.innerHTML=`<div class="scan-card ${conAviso?'scan-warn':'scan-ok'}"><div class="big">✓ Cargada${conAviso?' · revisá' : ''}</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
-          Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> · ${esc(d.tipo)||''}${d.aviso?'<br>⚠ '+esc(d.aviso):''}</div></div>`;
-        cargarDespachados();
+          Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> · ${esc(d.tipo)||''}${dest}${d.aviso?'<br>⚠ '+esc(d.aviso):''}</div></div>`;
+        cargarDespachados(); cargarDestinos();
       }
     }catch(e){
       beep(true);
@@ -952,6 +977,204 @@
       document.getElementById('list-despachadas').innerHTML=html2;
       st.textContent='';
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  // ---------- Centro de despacho: destinos + camiones (Parte 2) ----------
+  let _destinoActivo = null;
+  let _destinosData = { abiertos: [], colectas: [], transportistas: [], max_abiertos: 2 };
+  let _camionesData = [];
+  let _pickerHorario = null;
+
+  async function cargarDestinos(){
+    const st = document.getElementById('status-destinos');
+    if(st){ st.className='status'; st.textContent='Cargando destinos…'; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/destinos`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo cargar');
+      _destinosData = d;
+      // Mantener / ajustar el destino activo
+      const ids = (d.abiertos || []).map(x => x.id);
+      if(_destinoActivo && !ids.includes(_destinoActivo)) _destinoActivo = null;
+      if(!_destinoActivo && ids.length === 1) _destinoActivo = ids[0];
+      renderDestinos();
+      if(st) st.textContent='';
+    }catch(e){ if(st){ st.className='status err'; st.textContent='Error: '+e.message; } }
+  }
+
+  function renderDestinos(){
+    const abiertos = _destinosData.abiertos || [];
+    const max = _destinosData.max_abiertos || 2;
+    // --- Tarjetas de destinos abiertos ---
+    let html = '';
+    if(abiertos.length){
+      html += `<div class="destinos-grid">`;
+      for(const dd of abiertos){
+        const activo = dd.id === _destinoActivo;
+        const sub = dd.tipo === 'colecta'
+          ? (dd.patente ? esc(dd.patente) + (dd.descripcion ? ' · ' + esc(dd.descripcion) : '') : 'sin camión asignado')
+          : 'transportista tercerizado';
+        html += `<div class="dest-card dest-${dd.tipo}${activo?' dest-activo':''}">
+          <div class="dest-top"><span class="dest-badge dest-badge-${dd.tipo}">${dd.tipo==='colecta'?'Colecta':'Flex'}</span>
+            <span class="dest-nombre">${esc(dd.nombre)}</span></div>
+          <div class="dest-sub">${sub}</div>
+          <div class="dest-count"><span class="dest-n">${dd.cargados||0}</span><span>paquetes</span></div>
+          <div class="dest-actions">
+            <button class="btn-scan-here${activo?' on':''}" onclick="seleccionarDestino(${dd.id})">${activo?'✓ Escaneando acá':'Escanear acá'}</button>
+            <button class="btn-close-dest" onclick="cerrarDestino(${dd.id})">Cerrar</button>
+          </div></div>`;
+      }
+      html += `</div>`;
+    }
+    document.getElementById('destinos-abiertos').innerHTML = html;
+
+    // --- Opciones para abrir ---
+    let opt = '';
+    if(abiertos.length >= max){
+      opt = `<div class="opt-tope">Ya hay ${max} destinos abiertos. Cerrá uno para abrir otro.</div>`;
+    } else {
+      const colAbiertas = abiertos.filter(d=>d.tipo==='colecta').map(d=>d.colecta_horario);
+      const flexAbiertos = abiertos.filter(d=>d.tipo==='flex').map(d=>d.transportista);
+      const colectas = (_destinosData.colectas || []).filter(c => !colAbiertas.includes(c.horario));
+      const transp = (_destinosData.transportistas || []).filter(t => !flexAbiertos.includes(t));
+      if(colectas.length){
+        opt += `<div class="opciones-h">Colectas de ML</div>`;
+        for(const c of colectas){
+          opt += `<div class="opt-row"><span class="opt-ico opt-ico-colecta"></span>
+            <div><div class="opt-nombre">Colecta ${esc(c.horario)}</div>
+            <div class="opt-meta">${c.cutoff?('corte '+esc(c.cutoff)):''}</div></div>
+            <button class="btn-abrir" onclick="abrirColecta('${esc(c.horario)}')">Abrir</button></div>`;
+        }
+      }
+      if(transp.length){
+        opt += `<div class="opciones-h">Transportistas Flex</div>`;
+        for(const t of transp){
+          opt += `<div class="opt-row"><span class="opt-ico opt-ico-flex"></span>
+            <div><div class="opt-nombre">${esc(t)}</div><div class="opt-meta">se le entregan los paquetes</div></div>
+            <button class="btn-abrir" onclick="abrirFlex('${esc(t)}')">Abrir</button></div>`;
+        }
+      }
+      if(!colectas.length && !transp.length && !abiertos.length){
+        opt = `<div class="opt-tope">Hoy no hay colectas de ML programadas. Podés abrir un transportista Flex si aparece arriba, o revisá más tarde.</div>`;
+      }
+    }
+    document.getElementById('destinos-opciones').innerHTML = opt;
+    pintarBarraDestino();
+  }
+
+  function pintarBarraDestino(){
+    const bar = document.getElementById('destino-bar');
+    if(!bar) return;
+    const dd = (_destinosData.abiertos || []).find(x => x.id === _destinoActivo);
+    if(dd){
+      bar.className = 'destino-bar destino-bar-' + dd.tipo;
+      bar.innerHTML = `Cargando a: <b>${esc(dd.nombre)}</b> · escaneá los paquetes ${dd.tipo==='colecta'?'de Colecta':'de Flex'}`;
+    } else {
+      bar.className = 'destino-bar destino-bar-vacio';
+      bar.textContent = 'Elegí o abrí un destino abajo para empezar a cargar paquetes.';
+    }
+  }
+
+  function seleccionarDestino(id){
+    _destinoActivo = id;
+    renderDestinos();
+    const i = document.getElementById('scan-input'); if(i) i.focus();
+  }
+
+  async function abrirFlex(transportista){
+    try{
+      const r = await authFetch(`${API}/api/despacho/destinos/abrir`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ tipo:'flex', transportista }) });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo abrir');
+      if(d.destino) _destinoActivo = d.destino.id;
+      await cargarDestinos();
+      const i = document.getElementById('scan-input'); if(i) i.focus();
+    }catch(e){ alert('Error: ' + e.message); }
+  }
+
+  async function cargarCamiones(){
+    try{
+      const r = await authFetch(`${API}/api/despacho/camiones`); const d = await r.json();
+      if(r.ok) _camionesData = d.camiones || [];
+    }catch(e){ _camionesData = []; }
+  }
+
+  async function abrirColecta(horario){
+    _pickerHorario = horario;
+    await cargarCamiones();
+    renderPicker(horario, null);
+  }
+
+  function renderPicker(horario, preselectId){
+    const opts = _camionesData.map(c =>
+      `<option value="${c.id}"${String(c.id)===String(preselectId)?' selected':''}>${esc(c.patente)}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
+    const m = document.getElementById('camion-picker');
+    m.innerHTML = `<div class="cp-box">
+      <h3>Asignar camión · Colecta ${esc(horario)}</h3>
+      <label>Elegí un camión guardado</label>
+      <select id="cp-select">${opts || '<option value="">— todavía no guardaste camiones —</option>'}</select>
+      <div class="cp-or">— o cargá uno nuevo —</div>
+      <div class="cp-new">
+        <input id="cp-pat" placeholder="Patente" maxlength="12">
+        <input id="cp-desc" placeholder="Descripción (ej. Mercedes blanco)">
+        <button class="btn-light" onclick="agregarCamion()">Guardar</button>
+      </div>
+      <div class="status" id="cp-status"></div>
+      <div class="cp-actions">
+        <button class="btn-light" onclick="cerrarPicker()">Cancelar</button>
+        <button class="btn-pri" onclick="confirmarAbrirColecta()">Abrir colecta</button>
+      </div></div>`;
+    m.style.display = 'flex';
+  }
+  function cerrarPicker(){ const m=document.getElementById('camion-picker'); m.style.display='none'; m.innerHTML=''; }
+
+  async function agregarCamion(){
+    const pat = (document.getElementById('cp-pat').value || '').trim().toUpperCase();
+    const desc = (document.getElementById('cp-desc').value || '').trim();
+    const st = document.getElementById('cp-status');
+    if(!pat){ st.className='status err'; st.textContent='Escribí la patente.'; return; }
+    st.className='status'; st.textContent='Guardando…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/camiones`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ patente: pat, descripcion: desc }) });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo guardar');
+      await cargarCamiones();
+      renderPicker(_pickerHorario, d.camion ? d.camion.id : null);  // re-render con el nuevo elegido
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  async function confirmarAbrirColecta(){
+    const sel = document.getElementById('cp-select');
+    const camionId = sel && sel.value ? sel.value : null;
+    const st = document.getElementById('cp-status');
+    st.className='status'; st.textContent='Abriendo…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/destinos/abrir`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ tipo:'colecta', colecta_horario:_pickerHorario, camion_id:camionId }) });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo abrir');
+      if(d.destino) _destinoActivo = d.destino.id;
+      cerrarPicker();
+      await cargarDestinos();
+      const i = document.getElementById('scan-input'); if(i) i.focus();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  async function cerrarDestino(id){
+    if(!confirm('¿Cerrar este destino? No vas a poder cargarle más paquetes.')) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/destinos/cerrar`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ destino_id: id }) });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo cerrar');
+      if(_destinoActivo === id) _destinoActivo = null;
+      await cargarDestinos();
+    }catch(e){ alert('Error: ' + e.message); }
   }
 
   // ---------- Seguimiento ----------
