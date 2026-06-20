@@ -416,6 +416,10 @@
         <div class="status" id="status-destinos"></div>
         <div id="destinos-abiertos"></div>
         <div id="destinos-opciones"></div>
+        <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:14px">
+          <button class="btn-light" onclick="verColectaML()">🔎 ¿Quién retira hoy? (ver colecta de ML)</button>
+          <div id="colecta-ml-info" style="margin-top:10px"></div>
+        </div>
       </div>
 
       <div class="card-box">
@@ -1238,6 +1242,29 @@
       if(_destinoActivo === id) _destinoActivo = null;
       await cargarDestinos();
     }catch(e){ alert('Error: ' + e.message); }
+  }
+
+  // ¿Quién retira hoy? — muestra lo que ML informa de la colecta del día
+  async function verColectaML(){
+    const out = document.getElementById('colecta-ml-info');
+    out.innerHTML = '<div class="status">Consultando a Mercado Libre…</div>';
+    try{
+      const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
+      const cols = (d.colectas || []).filter(c => c.tanda === 'colecta');
+      if(!cols.length){ out.innerHTML = '<div class="status">ML no tiene colectas programadas para hoy.</div>'; return; }
+      let html = '<div class="colectas-grid">';
+      for(const c of cols){
+        const quien = c.carrier
+          ? `Retira: <b>${esc(c.carrier)}</b>${c.patente?` · Patente <b>${esc(c.patente)}</b>`:''}${c.vehiculo?` · ${esc(c.vehiculo)}`:''}${c.chofer?` · ${esc(c.chofer)}`:''}`
+          : '<span style="color:var(--muted2)">ML todavía no asignó el camión/transportista para esta colecta.</span>';
+        html += `<div class="ccard">
+          <div class="ch"><span class="hora">${esc(c.from)}–${esc(c.to)}</span><span class="corte">corte ${esc(c.cutoff)||'—'}</span></div>
+          <div class="dest-sub" style="margin-top:6px">${quien}</div></div>`;
+      }
+      html += '</div>';
+      out.innerHTML = html;
+    }catch(e){ out.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
   }
 
   // ---------- Seguimiento ----------
