@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+}<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -418,6 +418,7 @@
         <div id="destinos-opciones"></div>
         <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:14px">
           <button class="btn-light" onclick="verColectaML()">🔎 ¿Quién retira hoy? (ver colecta de ML)</button>
+          <button class="btn-light" onclick="diagNodo()" style="margin-left:8px">🔧 Diagnóstico por nodo</button>
           <div id="colecta-ml-info" style="margin-top:10px"></div>
         </div>
       </div>
@@ -1263,6 +1264,36 @@
           <div class="dest-sub" style="margin-top:6px">${quien}</div></div>`;
       }
       html += '</div>';
+      out.innerHTML = html;
+    }catch(e){ out.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  // Diagnóstico: ¿multi-origen? ¿qué id (usuario/nodo) trae el transportista?
+  async function diagNodo(){
+    const out = document.getElementById('colecta-ml-info');
+    out.innerHTML = '<div class="status">Diagnosticando (mira tags, depósitos y prueba la colecta por cada nodo)…</div>';
+    try{
+      const r = await authFetch(`${API}/api/despacho/diag-nodo`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo diagnosticar');
+      let html = `<div class="card-box" style="margin-top:0">`;
+      html += `<div class="group-h">Multi-origen</div><div style="font-size:14px">${d.multi_origen ? '✅ Sí, tu cuenta es multi-depósito (tag warehouse_management).' : '❌ No tiene el tag warehouse_management.'}</div>`;
+      html += `<div class="group-h">Depósitos / nodos</div>`;
+      if((d.nodos||[]).length){
+        for(const n of d.nodos){
+          html += `<div style="font-size:13px; padding:4px 0; border-bottom:1px solid var(--line)">${esc(n.descripcion)||'(sin nombre)'} · node_id <span class="mono">${esc(n.network_node_id)||'—'}</span></div>`;
+        }
+      } else { html += `<div style="font-size:13px; color:var(--muted2)">ML no devolvió depósitos por API.</div>`; }
+      html += `<div class="group-h">Colecta de hoy probada por cada id</div>`;
+      for(const p of (d.probados||[])){
+        html += `<div style="margin:8px 0; padding:8px 10px; background:#F7F7F7; border-radius:8px; font-size:13px">
+          <b>${esc(p.etiqueta)}</b> <span class="pill">HTTP ${p.status||'?'}</span> · ventanas hoy: ${p.ventanas_hoy||0}`;
+        for(const v of (p.detalle||[])){
+          const quien = v.carrier ? `Retira: <b style="color:var(--ok)">${esc(v.carrier)}${v.patente?' · '+esc(v.patente):''}${v.chofer?' · '+esc(v.chofer):''}</b>` : '<span style="color:var(--err)">sin transportista/patente</span>';
+          html += `<div style="margin-top:4px">${esc(v.from)}–${esc(v.to)} (corte ${esc(v.cutoff)||'—'}) → ${quien}</div>`;
+        }
+        html += `</div>`;
+      }
+      html += `</div>`;
       out.innerHTML = html;
     }catch(e){ out.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
   }
