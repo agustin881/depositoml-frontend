@@ -381,7 +381,8 @@
           <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Cargar</button>
         </div>
         <div class="scan-modos">
-          <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Usar cámara (alternativa)</button>
+          <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
+          <button id="btn-luz" class="scan-modo-btn" onclick="toggleLuz()" style="display:none">💡 Luz</button>
           <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test (solo mostrar lo que lee)</label>
         </div>
         <div id="cam-wrap" style="display:none">
@@ -817,6 +818,8 @@
       : 'Apuntá la cámara al QR o código de barras de la etiqueta.';
   }
 
+  let _torchOn = false;
+
   async function toggleCamara(){
     const wrap = document.getElementById('cam-wrap');
     const btn = document.getElementById('btn-cam');
@@ -841,12 +844,39 @@
         Html5QrcodeSupportedFormats.UPC_A,
         Html5QrcodeSupportedFormats.ITF
       ] : undefined;
+      // Recuadro de lectura grande y cuadrado (≈75% del lado menor del visor)
+      const qrbox = (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; };
       await _camScanner.start(
-        { facingMode: 'environment' },          // cámara trasera
-        { fps: 10, qrbox: { width: 250, height: 250 }, formatsToSupport: fmts },
+        { facingMode: 'environment' },     // ignorado si hay videoConstraints, lo dejo por compatibilidad
+        {
+          fps: 10,
+          qrbox,
+          formatsToSupport: fmts,
+          // Usa el detector de códigos NATIVO del navegador si existe (Android Chrome):
+          // mucho más rápido y confiable con el QR de Mercado Libre.
+          useBarCodeDetectorIfSupported: true,
+          // Cámara trasera en alta resolución y con enfoque continuo (clave para leer el QR):
+          videoConstraints: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: 'continuous' }]
+          }
+        },
         onLeerQR,
-        () => {}                                 // ignora frames sin código
+        () => {}                           // ignora frames sin código
       );
+      // iPhone/Safari: que el video se vea embebido y no en pantalla completa
+      const v = document.querySelector('#cam-reader video');
+      if(v){ v.setAttribute('playsinline','true'); v.setAttribute('webkit-playsinline','true'); v.muted = true; }
+      // Botón de linterna solo si el dispositivo lo soporta
+      _torchOn = false;
+      const luz = document.getElementById('btn-luz');
+      try{
+        const caps = _camScanner.getRunningTrackCapabilities();
+        luz.style.display = (caps && caps.torch) ? 'inline-block' : 'none';
+        luz.textContent = '💡 Luz';
+      }catch(e){ luz.style.display = 'none'; }
     }catch(e){
       document.getElementById('cam-hint').textContent =
         'No se pudo abrir la cámara. Revisá que diste permiso (y que estás en https).';
@@ -855,10 +885,20 @@
     }
   }
 
+  async function toggleLuz(){
+    if(!_camScanner) return;
+    try{
+      _torchOn = !_torchOn;
+      await _camScanner.applyVideoConstraints({ advanced: [{ torch: _torchOn }] });
+      document.getElementById('btn-luz').textContent = _torchOn ? '💡 Luz: ON' : '💡 Luz';
+    }catch(e){ document.getElementById('btn-luz').style.display = 'none'; }
+  }
+
   async function detenerCamara(){
     const btn = document.getElementById('btn-cam');
     try{ if(_camScanner){ await _camScanner.stop(); await _camScanner.clear(); } }catch(e){}
-    _camScanner = null;
+    _camScanner = null; _torchOn = false;
+    const luz = document.getElementById('btn-luz'); if(luz) luz.style.display = 'none';
     document.getElementById('cam-wrap').style.display = 'none';
     btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo');
   }
