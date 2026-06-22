@@ -117,11 +117,21 @@
   .selrow .u{color:var(--muted)}
 
   .card-box{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:18px; margin-top:16px}
-  .sep-card{background:#FFF7ED; border:1px solid #F6CFA3; border-radius:10px; padding:16px 18px; margin-bottom:16px}
-  .sep-card h2{font-size:16px; font-weight:700; margin:0 0 4px; color:var(--colecta-d)}
+  .sep-card{background:#FFF7ED; border:1px solid #F6CFA3; border-radius:10px; padding:14px 18px; margin-bottom:16px}
+  .sep-head{display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none}
+  .sep-chevron{color:var(--colecta-d); font-size:13px; width:14px}
+  .sep-title{font-size:16px; font-weight:700; color:var(--colecta-d)}
+  .sep-body{margin-top:8px}
   .sep-card .sub{font-size:13px; color:var(--muted2); margin:0 0 10px; line-height:1.5}
-  .sep-row{display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; padding:9px 2px; border-top:1px solid #F0DCC4; font-size:13px}
+  .sep-actions{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:6px 0 10px; border-bottom:1px solid #F0DCC4}
+  .sep-selall{font-size:13px; color:var(--muted2); display:flex; align-items:center; gap:6px; cursor:pointer}
+  .btn-sep-lote{padding:8px 16px; background:var(--colecta); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:13px}
+  .btn-sep-lote:disabled{background:#E3C7AC; cursor:default}
+  .sep-row{display:grid; grid-template-columns:auto auto 1fr auto auto; gap:10px; align-items:center; padding:9px 2px; border-top:1px solid #F0DCC4; font-size:13px}
+  .sep-row .sep-chk{width:18px; height:18px}
+  .sep-id{display:flex; flex-direction:column; line-height:1.3}
   .sep-row .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
+  .sep-row .venta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted2); white-space:nowrap}
   .sep-row .ti{color:var(--muted2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .sep-row .uds{font-weight:800; color:var(--colecta-d); white-space:nowrap}
   .sep-row .btn-sep{padding:7px 14px; background:var(--colecta); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:13px}
@@ -1348,24 +1358,60 @@
   }
 
   // ---------- Ventas para separar (Colecta, 2+ unidades) ----------
+  let _sepAbierto = false;   // arranca plegada para no ocupar lugar
+  let _sepData = [];
   async function cargarSeparables(){
     const card = document.getElementById('separables-card'); if(!card) return;
     try{
       const r = await authFetch(`${API}/api/despacho/separables`); const d = await r.json();
-      if(!r.ok || !d.separables || !d.separables.length){ card.innerHTML=''; return; }
-      let html = `<div class="sep-card"><h2>🔀 Ventas de Colecta para separar (${d.cantidad})</h2>
-        <p class="sub">Estas ventas tienen 2 o más unidades. Separalas para que cada caja vaya con su propia etiqueta y no tengas que enfilmarlas juntas.</p>`;
+      if(!r.ok || !d.separables || !d.separables.length){ card.innerHTML=''; _sepData=[]; return; }
+      _sepData = d.separables;
+      const ab = _sepAbierto;
+      let filas = '';
       for(const s of d.separables){
-        html += `<div class="sep-row">
-          <span class="sku">${esc(s.sku)||'SIN SKU'}</span>
+        filas += `<div class="sep-row">
+          <input type="checkbox" class="sep-chk" value="${esc(s.shipment_id)}" onchange="updateSepCount()">
+          <div class="sep-id"><span class="sku">${esc(s.sku)||'SIN SKU'}</span><span class="venta">#${esc(s.nro_venta)||'—'}</span></div>
           <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}${s.impresa?' <span class="impresa-tag">(ya impresa)</span>':''}</span>
           <span class="uds">${s.unidades} u</span>
           <button class="btn-sep" onclick="separarVenta('${esc(s.shipment_id)}','${esc(s.nro_venta)}',${s.unidades},${s.impresa?'true':'false'})">Separar</button>
         </div>`;
       }
-      html += `</div>`;
-      card.innerHTML = html;
-    }catch(e){ card.innerHTML=''; }   // si falla, no rompe la pestaña Imprimir
+      card.innerHTML = `<div class="sep-card">
+        <div class="sep-head" onclick="toggleSeparables()">
+          <span class="sep-chevron">${ab?'▾':'▸'}</span>
+          <span class="sep-title">🔀 Ventas de Colecta para separar (${d.cantidad})</span>
+        </div>
+        <div class="sep-body" id="sep-body" style="display:${ab?'block':'none'}">
+          <p class="sub">Estas ventas tienen 2 o más unidades. Separalas para que cada caja vaya con su propia etiqueta y no tengas que enfilmarlas juntas.</p>
+          <div class="sep-actions">
+            <label class="sep-selall"><input type="checkbox" id="sep-all" onchange="toggleSepAll()"> Seleccionar todas</label>
+            <button class="btn-sep-lote" id="btn-sep-lote" onclick="separarSeleccionadas()" disabled>Separar seleccionadas (0)</button>
+          </div>
+          ${filas}
+        </div>
+      </div>`;
+    }catch(e){ card.innerHTML=''; _sepData=[]; }   // si falla, no rompe la pestaña Imprimir
+  }
+
+  function toggleSeparables(){
+    _sepAbierto = !_sepAbierto;
+    const body = document.getElementById('sep-body');
+    const chev = document.querySelector('.sep-chevron');
+    if(body) body.style.display = _sepAbierto ? 'block' : 'none';
+    if(chev) chev.textContent = _sepAbierto ? '▾' : '▸';
+  }
+  function toggleSepAll(){
+    const all = document.getElementById('sep-all');
+    document.querySelectorAll('.sep-chk').forEach(c => { c.checked = all.checked; });
+    updateSepCount();
+  }
+  function updateSepCount(){
+    const n = document.querySelectorAll('.sep-chk:checked').length;
+    const total = document.querySelectorAll('.sep-chk').length;
+    const btn = document.getElementById('btn-sep-lote');
+    if(btn){ btn.textContent = `Separar seleccionadas (${n})`; btn.disabled = n === 0; }
+    const all = document.getElementById('sep-all'); if(all) all.checked = (n>0 && n===total);
   }
 
   async function separarVenta(shipmentId, nroVenta, unidades, impresa){
@@ -1383,6 +1429,33 @@
       alert('✅ Separada' + (d.separado_en ? ' ('+d.separado_en+')' : '') + '.\nEn unos segundos vas a ver las etiquetas nuevas para imprimir.');
       cargarSeparables(); cargarPanel(true);
     }catch(e){ alert('Error al separar: ' + e.message); }
+  }
+
+  async function separarSeleccionadas(){
+    const ids = Array.from(document.querySelectorAll('.sep-chk:checked')).map(c=>c.value);
+    if(!ids.length) return;
+    const items = _sepData.filter(s => ids.includes(String(s.shipment_id)))
+      .map(s => ({ shipment_id: s.shipment_id, nro_venta: s.nro_venta, unidades: s.unidades }));
+    const algunaImpresa = _sepData.some(s => ids.includes(String(s.shipment_id)) && s.impresa);
+    let msg = `¿Separar ${items.length} venta(s) seleccionada(s)? Cada una va a quedar con etiquetas separadas.`;
+    if(algunaImpresa) msg += '\n\n⚠ Alguna ya estaba impresa: vas a tener que reimprimir esas etiquetas.';
+    msg += '\n\nEsto crea envíos nuevos en Mercado Libre y no se puede deshacer.';
+    if(!confirm(msg)) return;
+    const btn = document.getElementById('btn-sep-lote');
+    if(btn){ btn.disabled=true; btn.textContent='Separando…'; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/separar-lote`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ items })
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo separar el lote');
+      let m = `✅ ${d.ok_count} separada(s).`;
+      if(d.error_count){ m += `\n\n⚠ ${d.error_count} con error:\n` + (d.errores||[]).map(e=>`• ${e.nro_venta}: ${e.error}`).join('\n'); }
+      m += '\n\nEn unos segundos vas a ver las etiquetas nuevas para imprimir.';
+      alert(m);
+      cargarSeparables(); cargarPanel(true);
+    }catch(e){ alert('Error al separar el lote: ' + e.message); if(btn){ btn.disabled=false; updateSepCount(); } }
   }
 
   // ---------- Seguimiento ----------
