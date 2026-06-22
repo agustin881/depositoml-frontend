@@ -283,6 +283,10 @@
   .seg-head h2{font-size:17px; font-weight:700; margin:0; color:var(--ink)}
   .seg-head button{padding:9px 14px; background:var(--ink); color:#fff; border:none; border-radius:8px; font-weight:600; font-size:13px}
   .seg-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin:14px 0}
+  .seg-filtro{display:flex; align-items:center; gap:8px; margin:6px 0 2px; flex-wrap:wrap}
+  .seg-filtro-lbl{font-size:13px; color:var(--muted2); font-weight:600}
+  .seg-fbtn{padding:6px 16px; border:1px solid var(--line2); background:#fff; border-radius:999px; font-size:13px; font-weight:600; color:var(--muted2); cursor:pointer}
+  .seg-fbtn.active{background:var(--ink); color:#fff; border-color:var(--ink)}
   .seg-card{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:14px 16px; border-top:4px solid var(--line2); cursor:pointer; transition:transform .08s}
   .seg-card:hover{transform:translateY(-2px)}
   .seg-card .c-n{font-size:30px; font-weight:800; line-height:1}
@@ -487,6 +491,12 @@
       <div class="seg-head">
         <h2>Flujo por etiqueta</h2>
         <button onclick="cargarSeguimiento()">Actualizar tablero</button>
+      </div>
+      <div class="seg-filtro">
+        <span class="seg-filtro-lbl">Ver:</span>
+        <button class="seg-fbtn active" data-segf="todos" onclick="setSegTipo('todos')">Todos</button>
+        <button class="seg-fbtn" data-segf="flex" onclick="setSegTipo('flex')">Flex</button>
+        <button class="seg-fbtn" data-segf="colecta" onclick="setSegTipo('colecta')">Colecta</button>
       </div>
       <div class="status" id="status-seg"></div>
       <div id="seg-cards" class="seg-cards"></div>
@@ -1469,49 +1479,63 @@
     ['entregadas','Entregadas','#2F9E44'],
     ['devoluciones','No entregadas / Devoluciones','#D63B2F']
   ];
+  let _segData = null, _segDias = 0, _segTipo = 'todos';
   async function cargarSeguimiento(){
-    const st=document.getElementById('status-seg'), board=document.getElementById('seg-board');
-    const cards=document.getElementById('seg-cards');
+    const st=document.getElementById('status-seg');
     st.className='status'; st.textContent='Armando el flujo (consulta cada envío en Mercado Libre, puede tardar)…';
     try{
       const r=await authFetch(`${API}/api/despacho/seguimiento`); const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo cargar');
-      st.textContent=`Envíos de los últimos ${d.dias} días.`;
-      // Tarjetas tipo ML
-      let cardsHtml='';
-      for(const [key,titulo,color] of SEG_ETAPAS){
-        const n=(d.etapas[key]||[]).length;
-        cardsHtml+=`<div class="seg-card" style="border-top-color:${color}" onclick="abrirEtapa('${key}')">
-          <div class="c-n" style="color:${color}">${n}</div><div class="c-l">${titulo}</div></div>`;
-      }
-      cards.innerHTML=cardsHtml;
-      // Detalle desplegable
-      let html='';
-      for(const [key,titulo,color] of SEG_ETAPAS){
-        const filas=d.etapas[key]||[];
-        const abierto=(key==='devoluciones'&&filas.length)?' open':'';
-        html+=`<details class="seg-sec" id="seg-${key}"${abierto}><summary>
-          <span class="seg-dot" style="background:${color}"></span>
-          <span class="seg-tit">${titulo}</span>
-          <span class="seg-n" style="color:${color}">${filas.length}</span></summary>`;
-        if(filas.length){
-          html+=`<div class="list">`;
-          for(const s of filas){
-            let extra='';
-            if(key==='programados') extra=`despachar ${esc(s.limite)||'?'}`;
-            else if(key==='despachadas') extra=s.despachado_at?new Date(s.despachado_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-            else if(key==='devoluciones') extra=esc(s.estado);
-            html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-              <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.colecta?` <span class="pill">${esc(s.colecta)}</span>`:''}</span>
-              <span class="venta">${esc(s.nro_venta)||""}</span>
-              <span class="u">${extra}</span></div>`;
-          }
-          html+=`</div>`;
+      _segData = d.etapas; _segDias = d.dias;
+      pintarSeguimiento();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; document.getElementById('seg-cards').innerHTML=''; }
+  }
+  function setSegTipo(t){
+    _segTipo = t;
+    document.querySelectorAll('.seg-fbtn').forEach(b=>b.classList.toggle('active', b.dataset.segf===t));
+    if(_segData) pintarSeguimiento();
+  }
+  function pintarSeguimiento(){
+    if(!_segData) return;
+    const st=document.getElementById('status-seg'), board=document.getElementById('seg-board');
+    const cards=document.getElementById('seg-cards');
+    const filtra = filas => _segTipo==='todos' ? filas : (filas||[]).filter(s=>s.tipo===_segTipo);
+    const suf = _segTipo==='todos' ? '' : ` · solo ${_segTipo==='flex'?'Flex':'Colecta'}`;
+    st.className='status'; st.textContent=`Envíos de los últimos ${_segDias} días${suf}.`;
+    // Tarjetas tipo ML
+    let cardsHtml='';
+    for(const [key,titulo,color] of SEG_ETAPAS){
+      const n=filtra(_segData[key]).length;
+      cardsHtml+=`<div class="seg-card" style="border-top-color:${color}" onclick="abrirEtapa('${key}')">
+        <div class="c-n" style="color:${color}">${n}</div><div class="c-l">${titulo}</div></div>`;
+    }
+    cards.innerHTML=cardsHtml;
+    // Detalle desplegable
+    let html='';
+    for(const [key,titulo,color] of SEG_ETAPAS){
+      const filas=filtra(_segData[key]);
+      const abierto=(key==='devoluciones'&&filas.length)?' open':'';
+      html+=`<details class="seg-sec" id="seg-${key}"${abierto}><summary>
+        <span class="seg-dot" style="background:${color}"></span>
+        <span class="seg-tit">${titulo}</span>
+        <span class="seg-n" style="color:${color}">${filas.length}</span></summary>`;
+      if(filas.length){
+        html+=`<div class="list">`;
+        for(const s of filas){
+          let extra='';
+          if(key==='programados') extra=`despachar ${esc(s.limite)||'?'}`;
+          else if(key==='despachadas') extra=s.despachado_at?new Date(s.despachado_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+          else if(key==='devoluciones') extra=esc(s.estado);
+          html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+            <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.colecta?` <span class="pill">${esc(s.colecta)}</span>`:''}</span>
+            <span class="venta">${esc(s.nro_venta)||""}</span>
+            <span class="u">${extra}</span></div>`;
         }
-        html+=`</details>`;
+        html+=`</div>`;
       }
-      board.innerHTML=html;
-    }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; cards.innerHTML=''; }
+      html+=`</details>`;
+    }
+    board.innerHTML=html;
   }
   function abrirEtapa(key){
     const el=document.getElementById('seg-'+key);
