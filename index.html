@@ -117,6 +117,15 @@
   .selrow .u{color:var(--muted)}
 
   .card-box{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:18px; margin-top:16px}
+  .sep-card{background:#FFF7ED; border:1px solid #F6CFA3; border-radius:10px; padding:16px 18px; margin-bottom:16px}
+  .sep-card h2{font-size:16px; font-weight:700; margin:0 0 4px; color:var(--colecta-d)}
+  .sep-card .sub{font-size:13px; color:var(--muted2); margin:0 0 10px; line-height:1.5}
+  .sep-row{display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; padding:9px 2px; border-top:1px solid #F0DCC4; font-size:13px}
+  .sep-row .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
+  .sep-row .ti{color:var(--muted2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .sep-row .uds{font-weight:800; color:var(--colecta-d); white-space:nowrap}
+  .sep-row .btn-sep{padding:7px 14px; background:var(--colecta); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:13px}
+  .impresa-tag{font-size:11px; color:var(--err); font-weight:600}
   .card-box h2{font-size:17px; font-weight:700; margin:0 0 14px; color:var(--ink)}
   .totals{display:flex; gap:26px; flex-wrap:wrap; margin-bottom:6px}
   .total-box .n{font-size:32px; font-weight:800; line-height:1}
@@ -344,6 +353,7 @@
 
     <!-- ===== IMPRIMIR ===== -->
     <section id="view-imprimir" class="view active">
+      <div id="separables-card"></div>
       <div class="vivo-head">
         <div class="vivo-estado" id="vivo-estado">Cargando panel…</div>
         <button class="vivo-refresh" onclick="cargarPanel(true)">↻ Actualizar ahora</button>
@@ -595,7 +605,7 @@
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     cargarImpresas(); cargarCodigo();
-    cargarPanel();
+    cargarPanel(); cargarSeparables();
     // Auto-refresco cada 30s (solo cuando la pestaña de impresión está visible)
     if(_panelTimer) clearInterval(_panelTimer);
     _panelTimer = setInterval(()=>{
@@ -620,6 +630,7 @@
       cargarDestinos(); cargarDespachados();
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
     } else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Despachar
+    if(name === 'imprimir') cargarSeparables();
     if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
     window.scrollTo(0, 0);
   }
@@ -1334,6 +1345,44 @@
       html += `</div>`;
       out.innerHTML = html;
     }catch(e){ out.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  // ---------- Ventas para separar (Colecta, 2+ unidades) ----------
+  async function cargarSeparables(){
+    const card = document.getElementById('separables-card'); if(!card) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/separables`); const d = await r.json();
+      if(!r.ok || !d.separables || !d.separables.length){ card.innerHTML=''; return; }
+      let html = `<div class="sep-card"><h2>🔀 Ventas de Colecta para separar (${d.cantidad})</h2>
+        <p class="sub">Estas ventas tienen 2 o más unidades. Separalas para que cada caja vaya con su propia etiqueta y no tengas que enfilmarlas juntas.</p>`;
+      for(const s of d.separables){
+        html += `<div class="sep-row">
+          <span class="sku">${esc(s.sku)||'SIN SKU'}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}${s.impresa?' <span class="impresa-tag">(ya impresa)</span>':''}</span>
+          <span class="uds">${s.unidades} u</span>
+          <button class="btn-sep" onclick="separarVenta('${esc(s.shipment_id)}','${esc(s.nro_venta)}',${s.unidades},${s.impresa?'true':'false'})">Separar</button>
+        </div>`;
+      }
+      html += `</div>`;
+      card.innerHTML = html;
+    }catch(e){ card.innerHTML=''; }   // si falla, no rompe la pestaña Imprimir
+  }
+
+  async function separarVenta(shipmentId, nroVenta, unidades, impresa){
+    let msg = `¿Separar la venta ${nroVenta} (${unidades} unidades) para que cada caja tenga su etiqueta?`;
+    if(impresa) msg += '\n\n⚠ Esta venta YA estaba impresa: al separarla vas a tener que volver a imprimir las etiquetas nuevas.';
+    msg += '\n\nEsto crea envíos nuevos en Mercado Libre y no se puede deshacer.';
+    if(!confirm(msg)) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/separar`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ shipment_id: shipmentId, nro_venta: nroVenta, unidades })
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'No se pudo separar');
+      alert('✅ Separada' + (d.separado_en ? ' ('+d.separado_en+')' : '') + '.\nEn unos segundos vas a ver las etiquetas nuevas para imprimir.');
+      cargarSeparables(); cargarPanel(true);
+    }catch(e){ alert('Error al separar: ' + e.message); }
   }
 
   // ---------- Seguimiento ----------
