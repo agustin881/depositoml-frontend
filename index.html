@@ -168,6 +168,10 @@
   .scan-modo-btn{padding:10px 16px; font-size:14px; background:var(--surface); border:1px solid var(--line2); border-radius:8px; color:var(--ink2); font-weight:600}
   .scan-modo-btn.activo{background:var(--err); color:#fff; border-color:var(--err)}
   .scan-test{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted2); cursor:pointer}
+  .scan-bajar{font-weight:700; color:var(--err)}
+  .bajar-banner{background:#FDECEC; border:1px solid #F3B1B6; color:#B42318; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:13px; line-height:1.45}
+  .dcard.modo-bajar{outline:3px solid var(--err); outline-offset:2px}
+  .dcard.modo-bajar .scan-row input{border-color:var(--err)}
   .scan-test input{width:16px; height:16px; accent-color:var(--flex)}
   .gun-label{font-size:12px; font-weight:700; color:var(--ok); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; display:flex; align-items:center; gap:6px}
   .scan-row{display:flex; gap:8px; flex-wrap:wrap}
@@ -418,6 +422,7 @@
     <section id="view-despachar" class="view">
       <div class="dcard">
         <div id="destino-bar" class="destino-bar destino-bar-vacio">Elegí o abrí un destino abajo para empezar a cargar paquetes.</div>
+        <div id="bajar-banner" class="bajar-banner" style="display:none">🔽 MODO BAJAR activo — escaneá el paquete que querés <b>sacar</b> de la colecta. Acordate de apagarlo después.</div>
         <div class="gun-label">▸ Pistola lectora (recomendado)</div>
         <div class="scan-row">
           <input id="scan-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
@@ -432,6 +437,7 @@
           <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
           <button id="btn-luz" class="scan-modo-btn" onclick="toggleLuz()" style="display:none">💡 Luz</button>
           <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test (solo mostrar lo que lee)</label>
+          <label class="scan-test scan-bajar"><input type="checkbox" id="modo-bajar" onchange="toggleBajar()"> 🔽 Bajar de la colecta</label>
         </div>
         <div id="cam-wrap" style="display:none">
           <div id="cam-reader"></div>
@@ -880,6 +886,17 @@
       : 'Apuntá la cámara al QR o código de barras de la etiqueta.';
   }
 
+  function toggleBajar(){
+    const on = document.getElementById('modo-bajar').checked;
+    const banner = document.getElementById('bajar-banner');
+    const card = document.querySelector('#view-despachar .dcard');
+    if(banner) banner.style.display = on ? 'block' : 'none';
+    if(card) card.classList.toggle('modo-bajar', on);
+    // No tiene sentido "bajar" y "test" a la vez
+    if(on){ const t=document.getElementById('modo-test'); if(t && t.checked){ t.checked=false; actualizarHintTest(); } }
+    const inp=document.getElementById('scan-input'); if(inp) inp.focus();
+  }
+
   let _torchOn = false;
 
   async function toggleCamara(){
@@ -1007,6 +1024,34 @@
         <div class="nums">Números largos detectados (8+ dígitos): ${nums.length ? nums.map(n=>`<span class="mono">${esc(n)}</span>`).join(' · ') : '—'}</div>
       </div>`;
       input.value=''; 
+      return;
+    }
+
+    // MODO BAJAR: saca el paquete de la colecta/destino (borra el escaneo)
+    if(document.getElementById('modo-bajar') && document.getElementById('modo-bajar').checked){
+      btn.disabled=true;
+      out.innerHTML=`<div class="status">Buscando el paquete para bajarlo…</div>`;
+      try{
+        const r=await authFetch(`${API}/api/despacho/bajar`,{
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo})});
+        const d=await r.json();
+        if(!r.ok) throw new Error(d.error||'No se pudo bajar');
+        if(d.resultado==='no_estaba'){
+          beep(true); flashCam('warn');
+          out.innerHTML=`<div class="scan-card scan-warn"><div class="big">No estaba cargado</div>
+            <div class="det">Ese paquete no figura en ninguna colecta/destino. Nada que bajar.</div></div>`;
+        } else {
+          beep(false); flashCam('warn');
+          out.innerHTML=`<div class="scan-card scan-warn"><div class="big">🔽 Bajado de la colecta</div>
+            <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
+            Venta <span class="mono">${esc(d.nro_venta)||'—'}</span>${d.destino_nombre?' · sacado de <b>'+esc(d.destino_nombre)+'</b>':''}<br>
+            Volvió a quedar pendiente.</div></div>`;
+          cargarDespachados(); cargarDestinos();
+        }
+      }catch(e){
+        beep(true);
+        out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">Error</div><div class="det">${esc(e.message)}</div></div>`;
+      }finally{ btn.disabled=false; input.value=''; input.focus(); }
       return;
     }
 
@@ -1479,14 +1524,14 @@
     ['entregadas','Entregadas','#2F9E44'],
     ['devoluciones','No entregadas / Devoluciones','#D63B2F']
   ];
-  let _segData = null, _segDias = 0, _segTipo = 'todos';
+  let _segData = null, _segAct = null, _segTipo = 'todos';
   async function cargarSeguimiento(){
     const st=document.getElementById('status-seg');
-    st.className='status'; st.textContent='Armando el flujo (consulta cada envío en Mercado Libre, puede tardar)…';
+    st.className='status'; st.textContent='Cargando el flujo…';
     try{
-      const r=await authFetch(`${API}/api/despacho/seguimiento`); const d=await r.json();
+      const r=await authFetch(`${API}/api/despacho/panel`); const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo cargar');
-      _segData = d.etapas; _segDias = d.dias;
+      _segData = d.etapas; _segAct = d.actualizado;
       pintarSeguimiento();
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; document.getElementById('seg-cards').innerHTML=''; }
   }
@@ -1499,9 +1544,10 @@
     if(!_segData) return;
     const st=document.getElementById('status-seg'), board=document.getElementById('seg-board');
     const cards=document.getElementById('seg-cards');
-    const filtra = filas => _segTipo==='todos' ? filas : (filas||[]).filter(s=>s.tipo===_segTipo);
+    const filtra = filas => _segTipo==='todos' ? (filas||[]) : (filas||[]).filter(s=>s.tipo===_segTipo);
     const suf = _segTipo==='todos' ? '' : ` · solo ${_segTipo==='flex'?'Flex':'Colecta'}`;
-    st.className='status'; st.textContent=`Envíos de los últimos ${_segDias} días${suf}.`;
+    const cuando = _segAct ? new Date(_segAct).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    st.className='status'; st.textContent=`Estado actual de tus envíos${suf}.${cuando?' Última novedad: '+cuando+'.':''}`;
     // Tarjetas tipo ML
     let cardsHtml='';
     for(const [key,titulo,color] of SEG_ETAPAS){
