@@ -304,6 +304,20 @@
   .seg-filtro-lbl{font-size:13px; color:var(--muted2); font-weight:600}
   .seg-fbtn{padding:6px 16px; border:1px solid var(--line2); background:#fff; border-radius:999px; font-size:13px; font-weight:600; color:var(--muted2); cursor:pointer}
   .seg-fbtn.active{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .hist-controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .hist-controls input{padding:9px 12px; border:1px solid var(--line2); border-radius:8px; font-size:14px}
+  .hist-controls input[type=text]{flex:1; min-width:160px}
+  .hist-tot{font-size:14px; margin-bottom:12px; font-weight:600}
+  .hist-badge{display:inline-block; font-size:11px; font-weight:800; padding:2px 8px; border-radius:10px; color:#fff; margin-right:4px}
+  .hist-grupo{border:1px solid var(--line2); border-radius:10px; margin-bottom:10px; overflow:hidden}
+  .hist-grupo summary{display:flex; align-items:center; gap:8px; padding:10px 14px; cursor:pointer; font-weight:700; list-style:none}
+  .hist-grupo summary::-webkit-details-marker{display:none}
+  .hist-grupo .hg-n{margin-left:auto; font-size:13px; color:var(--muted2); white-space:nowrap}
+  .hist-grupo .hg-n b{font-size:18px; color:var(--ink)}
+  .hist-row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; padding:6px 14px; border-top:1px solid var(--line); font-size:13px}
+  .hist-row .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
+  .hist-row .ti{color:var(--muted2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .hist-row .hr-meta{color:var(--muted); white-space:nowrap; font-size:12px}
   .seg-card{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:14px 16px; border-top:4px solid var(--line2); cursor:pointer; transition:transform .08s}
   .seg-card:hover{transform:translateY(-2px)}
   .seg-card .c-n{font-size:30px; font-weight:800; line-height:1}
@@ -527,6 +541,21 @@
       <div class="status" id="status-seg"></div>
       <div id="seg-cards" class="seg-cards"></div>
       <div id="seg-board"></div>
+
+      <div class="card-box">
+        <h2>Historial de despachos por fecha</h2>
+        <p class="hint">Elegí un día y mirá todo lo que salió, agrupado por colecta y transportista, con el total de envíos. O buscá una venta puntual para ver por dónde se despachó.</p>
+        <div class="hist-controls">
+          <input type="date" id="hist-fecha">
+          <button class="btn-light" onclick="verHistorial()">Ver el día</button>
+        </div>
+        <div class="hist-controls" style="margin-top:8px">
+          <input type="text" id="hist-venta" placeholder="N° de venta…" autocomplete="off"
+                 onkeydown="if(event.key==='Enter') buscarVentaHist()">
+          <button class="btn-light" onclick="buscarVentaHist()">Buscar venta</button>
+        </div>
+        <div id="hist-result" style="margin-top:14px"></div>
+      </div>
     </section>
 
     <!-- ===== DEMO (oculta; se llega desde el pie) ===== -->
@@ -678,7 +707,10 @@
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
     } else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Despachar
     if(name === 'imprimir') cargarSeparables();
-    if(name === 'seguimiento' && !document.getElementById('seg-board').innerHTML) cargarSeguimiento();
+    if(name === 'seguimiento'){
+      const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
+      if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
+    }
     window.scrollTo(0, 0);
   }
   // Contadores numéricos en las pestañas (estilo ML)
@@ -1551,6 +1583,62 @@
   }
 
   // ---------- Seguimiento ----------
+  // ---------- Historial de despachos por fecha ----------
+  function fechaHoyLocal(){ return new Date().toLocaleDateString('en-CA'); } // YYYY-MM-DD hora local (ART)
+
+  async function verHistorial(){
+    const out=document.getElementById('hist-result');
+    const fecha=document.getElementById('hist-fecha').value;
+    if(!fecha){ out.innerHTML='<div class="status err">Elegí una fecha.</div>'; return; }
+    out.innerHTML='<div class="status">Buscando lo despachado ese día…</div>';
+    try{
+      const r=await authFetch(`${API}/api/despacho/historial?fecha=${fecha}`); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo cargar');
+      if(!d.total){ out.innerHTML=`<div class="status">No hubo despachos el ${esc(fecha)}.</div>`; return; }
+      let html=`<div class="hist-tot">${d.total} envíos · <span style="color:var(--colecta)">Colecta ${d.colecta}</span> · <span style="color:var(--flex)">Flex ${d.flex}</span></div>`;
+      for(const g of d.grupos){
+        const col=g.tipo==='colecta'?'var(--colecta)':'var(--flex)';
+        html+=`<details class="hist-grupo"><summary>
+          <span class="hist-badge" style="background:${col}">${g.tipo==='colecta'?'Colecta':'Flex'}</span>
+          <span>${esc(g.destino)}${g.ref?' · '+esc(g.ref):''}</span>
+          <span class="hg-n"><b>${g.items.length}</b> envíos</span></summary>`;
+        for(const it of g.items){
+          const hora=it.despachado_at?new Date(it.despachado_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+          html+=`<div class="hist-row"><span class="sku">${esc(it.sku)||'—'}</span>
+            <span class="ti" title="${esc(it.titulo)}">${esc(it.titulo)||''}</span>
+            <span class="hr-meta">venta ${esc(it.nro_venta)||'—'} · ${hora}</span></div>`;
+        }
+        html+=`</details>`;
+      }
+      out.innerHTML=html;
+    }catch(e){ out.innerHTML='<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  async function buscarVentaHist(){
+    const out=document.getElementById('hist-result');
+    const v=(document.getElementById('hist-venta').value||'').trim();
+    if(!v){ out.innerHTML='<div class="status err">Poné un número de venta.</div>'; return; }
+    out.innerHTML='<div class="status">Buscando la venta…</div>';
+    try{
+      const r=await authFetch(`${API}/api/despacho/historial?venta=${encodeURIComponent(v)}`); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo buscar');
+      if(!d.resultados||!d.resultados.length){
+        out.innerHTML=`<div class="status">La venta ${esc(v)} no figura despachada (no se escaneó a ninguna colecta ni transportista).</div>`; return; }
+      let html='';
+      for(const it of d.resultados){
+        const col=it.tipo==='colecta'?'var(--colecta)':'var(--flex)';
+        const f=it.despachado_at?new Date(it.despachado_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+        const medio=[esc(it.destino_nombre)||'—', it.colecta_patente?'patente '+esc(it.colecta_patente):'', it.transportista?esc(it.transportista):''].filter(Boolean).join(' · ');
+        html+=`<div class="card-box" style="margin:0 0 10px;padding:14px">
+          <div style="font-weight:700">${esc(it.sku)||'—'} · venta ${esc(it.nro_venta)||'—'}</div>
+          <div style="color:var(--muted2);font-size:13px;margin:2px 0 8px">${esc(it.titulo)||''}</div>
+          <div><span class="hist-badge" style="background:${col}">${it.tipo==='colecta'?'Colecta':'Flex'}</span>
+          Despachada por <b>${medio}</b> · ${f}</div></div>`;
+      }
+      out.innerHTML=html;
+    }catch(e){ out.innerHTML='<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
   const SEG_ETAPAS=[
     ['para_imprimir','Para imprimir','#6B675E'],
     ['programados','Programados · despacho futuro','#B88207'],
