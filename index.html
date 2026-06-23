@@ -137,6 +137,7 @@
   .sep-row .uds{font-weight:800; color:var(--colecta-d); white-space:nowrap}
   .sep-row .btn-sep{padding:7px 14px; background:var(--colecta); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:13px}
   .impresa-tag{font-size:11px; color:var(--err); font-weight:600}
+  .sep-estado{font-size:10px; color:var(--muted2); background:#ECECEC; padding:1px 6px; border-radius:6px; font-family:'JetBrains Mono',monospace; margin-left:2px}
   .card-box h2{font-size:17px; font-weight:700; margin:0 0 14px; color:var(--ink)}
   .totals{display:flex; gap:26px; flex-wrap:wrap; margin-bottom:6px}
   .total-box .n{font-size:32px; font-weight:800; line-height:1}
@@ -384,7 +385,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v22</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v23</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1497,7 +1498,7 @@
         filas += `<div class="sep-row">
           <input type="checkbox" class="sep-chk" value="${esc(s.shipment_id)}" onchange="updateSepCount()">
           <div class="sep-id"><span class="sku">${esc(s.sku)||'SIN SKU'}</span><span class="venta">#${esc(s.nro_venta)||'—'}</span></div>
-          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}${s.impresa?' <span class="impresa-tag">(ya impresa)</span>':''}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}${s.impresa?' <span class="impresa-tag">(ya impresa)</span>':''}${s.estado?` <span class="sep-estado">${esc(s.estado)}${s.sub?' · '+esc(s.sub):''}</span>`:''}</span>
           <span class="uds">${s.unidades} u</span>
           <button class="btn-sep" onclick="separarVenta('${esc(s.shipment_id)}','${esc(s.nro_venta)}',${s.unidades},${s.impresa?'true':'false'})">Separar</button>
         </div>`;
