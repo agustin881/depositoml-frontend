@@ -1628,7 +1628,7 @@
       for(const it of d.resultados){
         const col=it.tipo==='colecta'?'var(--colecta)':'var(--flex)';
         const f=it.despachado_at?new Date(it.despachado_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-        const medio=[esc(it.destino_nombre)||'—', it.colecta_patente?'patente '+esc(it.colecta_patente):'', it.transportista?esc(it.transportista):''].filter(Boolean).join(' · ');
+        const medio=[esc(it.destino_nombre)||'—', it.patente?'patente '+esc(it.patente):'', it.camion?esc(it.camion):''].filter(Boolean).join(' · ');
         html+=`<div class="card-box" style="margin:0 0 10px;padding:14px">
           <div style="font-weight:700">${esc(it.sku)||'—'} · venta ${esc(it.nro_venta)||'—'}</div>
           <div style="color:var(--muted2);font-size:13px;margin:2px 0 8px">${esc(it.titulo)||''}</div>
