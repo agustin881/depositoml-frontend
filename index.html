@@ -244,22 +244,22 @@
     .desp-grid{grid-template-columns:1fr}
     .desp-verif{order:-1}
   }
-  .dest-card{background:#fff; border:1px solid var(--line2); border-radius:10px; padding:15px; border-left:4px solid var(--line2)}
+  .destinos-grid{gap:8px}
+  .dest-card{background:#fff; border:1px solid var(--line2); border-radius:9px; padding:9px 12px; border-left:4px solid var(--line2)}
   .dest-card.dest-flex{border-left-color:var(--flex)}
   .dest-card.dest-colecta{border-left-color:var(--colecta)}
   .dest-card.dest-activo{box-shadow:0 0 0 2px var(--flex); border-color:var(--flex)}
-  .dest-top{display:flex; align-items:center; gap:8px; margin-bottom:4px}
+  .dest-top{display:flex; align-items:center; gap:8px; margin-bottom:2px}
   .dest-badge{font-size:10px; font-weight:800; padding:2px 8px; border-radius:10px; color:#fff; letter-spacing:.04em}
   .dest-badge-flex{background:var(--flex)} .dest-badge-colecta{background:var(--colecta)}
   .dest-nombre{font-weight:700; font-size:15px; color:var(--ink)}
-  .dest-sub{font-size:12px; color:var(--muted2); margin-bottom:8px}
-  .dest-count{display:flex; align-items:baseline; gap:6px; margin-bottom:12px}
-  .dest-n{font-size:34px; font-weight:800; line-height:1; color:var(--ink)}
-  .dest-count span:last-child{font-size:12px; color:var(--muted)}
+  .dest-cnt{margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap}
+  .dest-cnt b{font-size:22px; font-weight:800; color:var(--ink); line-height:1}
+  .dest-sub{font-size:11px; color:var(--muted2); margin-bottom:7px}
   .dest-actions{display:flex; gap:8px}
-  .btn-scan-here{flex:1; padding:9px; background:var(--surface); border:1px solid var(--flex); color:var(--flex); border-radius:8px; font-weight:700; font-size:13px}
+  .btn-scan-here{flex:1; padding:7px; background:var(--surface); border:1px solid var(--flex); color:var(--flex); border-radius:8px; font-weight:700; font-size:13px}
   .btn-scan-here.on{background:var(--flex); color:#fff}
-  .btn-close-dest{padding:9px 12px; background:var(--surface); border:1px solid var(--line2); color:var(--muted2); border-radius:8px; font-weight:600; font-size:13px}
+  .btn-close-dest{padding:7px 12px; background:var(--surface); border:1px solid var(--line2); color:var(--muted2); border-radius:8px; font-weight:600; font-size:13px}
   .opciones-h{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; margin:16px 0 8px}
   .opt-row{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; background:#fff}
   .opt-ico{width:9px; height:9px; border-radius:3px}
@@ -1223,7 +1223,8 @@
   }
 
   function renderDestinos(){
-    const abiertos = _destinosData.abiertos || [];
+    const abiertos = (_destinosData.abiertos || []).slice()
+      .sort((a,b) => (a.tipo==='colecta'?0:1) - (b.tipo==='colecta'?0:1)); // colectas primero
     const max = _destinosData.max_abiertos || 2;
     // --- Tarjetas de destinos abiertos ---
     let html = '';
@@ -1235,12 +1236,14 @@
           ? (dd.patente ? esc(dd.patente) + (dd.descripcion ? ' · ' + esc(dd.descripcion) : '') : 'sin camión asignado')
           : 'transportista tercerizado';
         html += `<div class="dest-card dest-${dd.tipo}${activo?' dest-activo':''}">
-          <div class="dest-top"><span class="dest-badge dest-badge-${dd.tipo}">${dd.tipo==='colecta'?'Colecta':'Flex'}</span>
-            <span class="dest-nombre">${esc(dd.nombre)}</span></div>
+          <div class="dest-top">
+            <span class="dest-badge dest-badge-${dd.tipo}">${dd.tipo==='colecta'?'Colecta':'Flex'}</span>
+            <span class="dest-nombre">${esc(dd.nombre)}</span>
+            <span class="dest-cnt"><b>${dd.cargados||0}</b> pq</span>
+          </div>
           <div class="dest-sub">${sub}</div>
-          <div class="dest-count"><span class="dest-n">${dd.cargados||0}</span><span>paquetes</span></div>
           <div class="dest-actions">
-            <button class="btn-scan-here${activo?' on':''}" onclick="seleccionarDestino(${dd.id})">${activo?'✓ Escaneando acá':'Escanear acá'}</button>
+            <button class="btn-scan-here${activo?' on':''}" onclick="seleccionarDestino(${dd.id})">${activo?'✓ Escaneando':'Escanear acá'}</button>
             <button class="btn-close-dest" onclick="cerrarDestino(${dd.id})">Cerrar</button>
           </div></div>`;
       }
