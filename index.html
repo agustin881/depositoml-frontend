@@ -169,6 +169,7 @@
   .scan-modo-btn.activo{background:var(--err); color:#fff; border-color:var(--err)}
   .scan-test{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted2); cursor:pointer}
   .scan-bajar{font-weight:700; color:var(--err)}
+  .app-ver{font-size:11px; font-weight:700; color:var(--muted); background:#EFEFEF; padding:2px 7px; border-radius:8px; vertical-align:middle; margin-left:4px}
   .bajar-banner{background:#FDECEC; border:1px solid #F3B1B6; color:#B42318; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:13px; line-height:1.45}
   .dcard.modo-bajar{outline:3px solid var(--err); outline-offset:2px}
   .dcard.modo-bajar .scan-row input{border-color:var(--err)}
@@ -383,7 +384,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito</div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v22</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
