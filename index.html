@@ -231,6 +231,19 @@
   .btn-pri{padding:10px 16px; background:var(--flex); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:14px}
   .destinos-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:6px 0 4px}
   @media(max-width:640px){.destinos-grid{grid-template-columns:1fr}}
+  .desp-grid{display:grid; grid-template-columns:minmax(280px,360px) 1fr; gap:16px; align-items:start}
+  .desp-grid .dcard{padding:18px}
+  .desp-destinos .destinos-grid{grid-template-columns:1fr}
+  .desp-destinos .dest-actions{flex-wrap:wrap}
+  .desp-totales{display:flex; gap:10px; margin:12px 0 4px; flex-wrap:wrap}
+  .desp-totales .tt{flex:1; min-width:140px; background:#F7F7F7; border-radius:8px; padding:8px 12px; font-size:13px; color:var(--muted2)}
+  .desp-totales .tt b{font-size:17px; color:var(--ink)}
+  .desp-totales .tt-colecta{border-left:4px solid var(--colecta)}
+  .desp-totales .tt-flex{border-left:4px solid var(--flex)}
+  @media(max-width:820px){
+    .desp-grid{grid-template-columns:1fr}
+    .desp-verif{order:-1}
+  }
   .dest-card{background:#fff; border:1px solid var(--line2); border-radius:10px; padding:15px; border-left:4px solid var(--line2)}
   .dest-card.dest-flex{border-left-color:var(--flex)}
   .dest-card.dest-colecta{border-left-color:var(--colecta)}
@@ -420,48 +433,55 @@
 
     <!-- ===== DESPACHAR (centro de despacho · Parte 2) ===== -->
     <section id="view-despachar" class="view">
-      <div class="dcard">
-        <div id="destino-bar" class="destino-bar destino-bar-vacio">Elegí o abrí un destino abajo para empezar a cargar paquetes.</div>
-        <div id="bajar-banner" class="bajar-banner" style="display:none">🔽 MODO BAJAR activo — escaneá el paquete que querés <b>sacar</b> de la colecta. Acordate de apagarlo después.</div>
-        <div class="gun-label">▸ Pistola lectora (recomendado)</div>
-        <div class="scan-row">
-          <input id="scan-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
-                 onkeydown="if(event.key==='Enter') escanear(this.value)">
-          <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Cargar</button>
-        </div>
-        <div class="scan-stats">
-          <div class="stat-box stat-esc"><div class="stat-n" id="stat-esc-n">0</div><div class="stat-l">escaneados</div></div>
-          <div class="stat-box stat-pend"><div class="stat-n" id="stat-pend-n">—</div><div class="stat-l" id="stat-pend-l">faltan</div></div>
-        </div>
-        <div class="scan-modos">
-          <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
-          <button id="btn-luz" class="scan-modo-btn" onclick="toggleLuz()" style="display:none">💡 Luz</button>
-          <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test (solo mostrar lo que lee)</label>
-          <label class="scan-test scan-bajar"><input type="checkbox" id="modo-bajar" onchange="toggleBajar()"> 🔽 Bajar de la colecta</label>
-        </div>
-        <div id="cam-wrap" style="display:none">
-          <div id="cam-reader"></div>
-          <div id="cam-cont" class="cam-cont">✓ <b id="cam-cont-n">0</b></div>
-          <div id="cam-flash" class="cam-flash"></div>
-          <div class="cam-hint" id="cam-hint"></div>
-        </div>
-        <div id="scan-result"></div>
-      </div>
+      <div class="desp-grid">
 
-      <div class="dcard">
-        <div class="seg-head">
-          <h2>Destinos de despacho</h2>
-          <button class="btn-light" onclick="cargarDestinos()">↻ Actualizar</button>
+        <!-- IZQUIERDA: destinos -->
+        <div class="dcard desp-destinos">
+          <div class="seg-head">
+            <h2>Destinos</h2>
+            <button class="btn-light" onclick="cargarDestinos()">↻</button>
+          </div>
+          <p class="hint">Hasta <b>2 destinos</b> abiertos. <b>Colecta</b> lleva camión; <b>Flex</b> (Ruedo, Gustavo) se entrega en mano. No deja mezclar Flex con Colecta.</p>
+          <div class="status" id="status-destinos"></div>
+          <div id="destinos-abiertos"></div>
+          <div id="destinos-opciones"></div>
+          <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px">
+            <button class="btn-light" onclick="verColectaML()">🔎 ¿Quién retira hoy?</button>
+            <button class="btn-light" onclick="diagNodo()" style="margin-top:8px">🔧 Diagnóstico por nodo</button>
+            <div id="colecta-ml-info" style="margin-top:10px"></div>
+          </div>
         </div>
-        <p class="hint">Abrí hasta <b>2 destinos</b> a la vez. La <b>Colecta</b> lleva un camión (patente); a los transportistas <b>Flex</b> (Ruedo, Gustavo) se les entregan los paquetes. Escaneá cada paquete al destino que corresponde — no deja mezclar Flex con Colecta.</p>
-        <div class="status" id="status-destinos"></div>
-        <div id="destinos-abiertos"></div>
-        <div id="destinos-opciones"></div>
-        <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:14px">
-          <button class="btn-light" onclick="verColectaML()">🔎 ¿Quién retira hoy? (ver colecta de ML)</button>
-          <button class="btn-light" onclick="diagNodo()" style="margin-left:8px">🔧 Diagnóstico por nodo</button>
-          <div id="colecta-ml-info" style="margin-top:10px"></div>
+
+        <!-- DERECHA: verificador -->
+        <div class="dcard desp-verif">
+          <div id="destino-bar" class="destino-bar destino-bar-vacio">Elegí o abrí un destino a la izquierda para empezar a cargar paquetes.</div>
+          <div id="bajar-banner" class="bajar-banner" style="display:none">🔽 MODO BAJAR activo — escaneá el paquete que querés <b>sacar</b> de la colecta. Acordate de apagarlo después.</div>
+          <div class="gun-label">▸ Pistola lectora (recomendado)</div>
+          <div class="scan-row">
+            <input id="scan-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
+                   onkeydown="if(event.key==='Enter') escanear(this.value)">
+            <button class="btn-scan" onclick="escanear(document.getElementById('scan-input').value)" id="btn-scan">Cargar</button>
+          </div>
+          <div class="scan-stats">
+            <div class="stat-box stat-esc"><div class="stat-n" id="stat-esc-n">0</div><div class="stat-l" id="stat-esc-l">escaneados</div></div>
+            <div class="stat-box stat-pend"><div class="stat-n" id="stat-pend-n">—</div><div class="stat-l" id="stat-pend-l">faltan</div></div>
+          </div>
+          <div id="desp-totales" class="desp-totales"></div>
+          <div class="scan-modos">
+            <button id="btn-cam" class="scan-modo-btn" onclick="toggleCamara()">📷 Escanear con cámara</button>
+            <button id="btn-luz" class="scan-modo-btn" onclick="toggleLuz()" style="display:none">💡 Luz</button>
+            <label class="scan-test"><input type="checkbox" id="modo-test" onchange="actualizarHintTest()"> Modo test</label>
+            <label class="scan-test scan-bajar"><input type="checkbox" id="modo-bajar" onchange="toggleBajar()"> 🔽 Bajar de la colecta</label>
+          </div>
+          <div id="cam-wrap" style="display:none">
+            <div id="cam-reader"></div>
+            <div id="cam-cont" class="cam-cont">✓ <b id="cam-cont-n">0</b></div>
+            <div id="cam-flash" class="cam-flash"></div>
+            <div class="cam-hint" id="cam-hint"></div>
+          </div>
+          <div id="scan-result"></div>
         </div>
+
       </div>
 
       <div class="card-box">
@@ -1080,7 +1100,9 @@
           Se escaneó el ${d.despachado_at?new Date(d.despachado_at).toLocaleString('es-AR'):'—'}${d.usuario?' por '+esc(d.usuario):''}.</div></div>`;
       } else {
         beep(false); flashCam('ok');
-        // Suma optimista al tipo del destino activo (se corrige al refrescar)
+        // Suma optimista: al destino activo y al total del tipo (se corrige al refrescar)
+        const dd = (_destinosData.abiertos||[]).find(x => x.id === _destinoActivo);
+        if(dd) dd.cargados = (dd.cargados||0) + 1;
         const t = tipoDestinoActivo();
         if(t && _porTipo[t]){ _porTipo[t].escaneadas++; _porTipo[t].pendientes = Math.max(0, _porTipo[t].pendientes - 1); }
         pintarStats();
@@ -1143,24 +1165,35 @@
   }
   // Pinta los dos números grandes (escaneados verde / faltan rojo) según el tipo del destino activo
   function pintarStats(){
-    const t = tipoDestinoActivo();
+    const dd = (_destinosData.abiertos || []).find(x => x.id === _destinoActivo);
     const esc = document.getElementById('stat-esc-n');
+    const escL = document.getElementById('stat-esc-l');
     const pen = document.getElementById('stat-pend-n');
     const penL = document.getElementById('stat-pend-l');
     const cam = document.getElementById('cam-cont-n');
-    if(!t){
+    // Totales del día por tipo (siempre visibles)
+    const tot = document.getElementById('desp-totales');
+    if(tot){
+      const c = _porTipo.colecta || {}, f = _porTipo.flex || {};
+      tot.innerHTML = `<div class="tt tt-colecta">Total Colecta · <b>${c.escaneadas||0}</b> escaneadas · ${c.pendientes||0} faltan</div>
+        <div class="tt tt-flex">Total Flex · <b>${f.escaneadas||0}</b> escaneadas · ${f.pendientes||0} faltan</div>`;
+    }
+    // Contador grande: por DESTINO activo
+    if(!dd){
       if(esc) esc.textContent = '0';
+      if(escL) escL.textContent = 'escaneados';
       if(pen) pen.textContent = '—';
       if(penL) penL.textContent = 'faltan';
       if(cam) cam.textContent = '0';
       return;
     }
-    const d = _porTipo[t] || { escaneadas:0, pendientes:0 };
-    const nombre = t === 'colecta' ? 'Colecta' : 'Flex';
-    if(esc) esc.textContent = d.escaneadas || 0;
-    if(pen) pen.textContent = d.pendientes || 0;
+    const tp = _porTipo[dd.tipo] || { pendientes:0 };
+    const nombre = dd.tipo === 'colecta' ? 'Colecta' : 'Flex';
+    if(esc) esc.textContent = dd.cargados || 0;                 // lo escaneado EN ESTE destino
+    if(escL) escL.textContent = 'en ' + (dd.nombre || nombre);
+    if(pen) pen.textContent = tp.pendientes || 0;              // faltan del tipo (total)
     if(penL) penL.textContent = 'faltan · ' + nombre;
-    if(cam) cam.textContent = d.escaneadas || 0;
+    if(cam) cam.textContent = dd.cargados || 0;
   }
   // Destello grande sobre la cámara: verde ✓ (ok), rojo ✗ (cancelada/error), ámbar ! (duplicada)
   function flashCam(tipo){
