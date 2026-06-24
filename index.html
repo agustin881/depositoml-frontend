@@ -359,6 +359,9 @@
   .hist-row .sku{font-family:'JetBrains Mono',monospace; font-weight:600; white-space:nowrap}
   .hist-row .ti{color:var(--muted2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .hist-row .hr-meta{color:var(--muted); white-space:nowrap; font-size:12px}
+  .tanda-h{font-weight:800; font-size:12px; padding:8px 4px 4px; letter-spacing:.02em}
+  .tanda-hoy{color:var(--ok)}
+  .tanda-manana{color:#B88207}
   .hist-cargo{padding:8px 14px; background:#F7F7F7; font-size:12px; color:var(--muted2); border-top:1px solid var(--line)}
   .seg-card{background:var(--surface); border-radius:10px; box-shadow:var(--shadow); padding:14px 16px; border-top:4px solid var(--line2); cursor:pointer; transition:transform .08s}
   .seg-card:hover{transform:translateY(-2px)}
@@ -425,7 +428,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v30</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v31</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -894,24 +897,34 @@
 
   function pintarTanda(tipo){
     const arr = _panelData[tipo] || [];
+    const hoy = arr.filter(s => s.cuando !== 'manana');
+    const manana = arr.filter(s => s.cuando === 'manana');
     setBadge('imprimir', (_panelData.flex||[]).length + (_panelData.colecta||[]).length);
-    document.getElementById('num-'+tipo).textContent = arr.length;
+    document.getElementById('num-'+tipo).textContent = hoy.length;
     const cnt = document.getElementById('count-'+tipo);
-    cnt.className = 'count' + (arr.length ? '' : ' empty');
+    cnt.className = 'count' + (hoy.length ? '' : ' empty');
+    const lbl = cnt.querySelector('.lbl');
+    if(lbl) lbl.innerHTML = `para imprimir HOY${manana.length?` · <span style="color:var(--muted)">${manana.length} para mañana</span>`:''}`;
     const print = document.getElementById('print-'+tipo);
     const printsel = document.getElementById('printsel-'+tipo);
-    print.disabled = !arr.length;
-    print.textContent = arr.length ? `Imprimir todas (${tipo} · ${arr.length})` : `Imprimir todas (${tipo})`;
+    print.disabled = !hoy.length;
+    print.textContent = hoy.length ? `Imprimir HOY (${tipo} · ${hoy.length})` : `Imprimir HOY (${tipo})`;
     const list = document.getElementById('list-'+tipo);
     if(!arr.length){ list.innerHTML=''; printsel.disabled=true; return; }
-    let html = `<div class="selhead"><label><input type="checkbox" onchange="toggleTodos('${tipo}',this.checked)"> Seleccionar todo</label></div>`;
-    for(const s of arr){
-      html += `<div class="selrow">
+    const fila = s => `<div class="selrow">
         <input type="checkbox" class="chk-${tipo}" value="${esc(s.shipment_id)}" onchange="actualizarSelBtn('${tipo}')">
         <span class="sku">${esc(s.sku)||'SIN SKU'}</span>
         <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}</span>
         <span class="venta">${esc(s.nro_venta)||''}</span>
         <span class="u">×${s.unidades||1}</span></div>`;
+    let html = `<div class="selhead"><label><input type="checkbox" onchange="toggleTodos('${tipo}',this.checked)"> Seleccionar todo</label></div>`;
+    if(hoy.length){
+      html += `<div class="tanda-h tanda-hoy">🟢 Para despachar HOY · ${hoy.length}</div>`;
+      for(const s of hoy) html += fila(s);
+    }
+    if(manana.length){
+      html += `<div class="tanda-h tanda-manana">🟠 Para mañana / más adelante · ${manana.length}</div>`;
+      for(const s of manana) html += fila(s);
     }
     list.innerHTML = html;
     printsel.disabled = true;
@@ -930,9 +943,9 @@
   }
 
   async function imprimirTanda(tipo){
-    const arr = _panelData[tipo] || [];
+    const arr = (_panelData[tipo] || []).filter(s => s.cuando !== 'manana');
     if(!arr.length) return;
-    await imprimirIds(tipo, arr.map(s => s.shipment_id), `etiquetas_${tipo}.pdf`);
+    await imprimirIds(tipo, arr.map(s => s.shipment_id), `etiquetas_${tipo}_hoy.pdf`);
   }
   async function imprimirSeleccion(tipo){
     const ids = idsSeleccion(tipo);
