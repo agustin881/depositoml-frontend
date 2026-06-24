@@ -335,6 +335,7 @@
   .seg-fbtn.active{background:var(--ink); color:#fff; border-color:var(--ink)}
   .hist-controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
   .tab-config{font-size:18px; padding-left:10px; padding-right:10px}
+  .cp-fixed{background:#F0F6FF; border:1px solid var(--flex); color:var(--flex); font-weight:800; padding:10px 14px; border-radius:8px; font-size:16px}
   .cam-form{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0}
   .cam-form input{padding:10px 12px; border:1px solid var(--line2); border-radius:8px; font-size:14px}
   .cam-form input#cam-pat{width:160px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; font-weight:700}
@@ -423,7 +424,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v26</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v27</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -499,7 +500,6 @@
           <div class="status" id="status-destinos"></div>
           <div id="destinos-abiertos"></div>
           <div id="destinos-opciones"></div>
-          <div id="colecta-hoy" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px"></div>
         </div>
 
         <!-- DERECHA: verificador -->
@@ -1359,6 +1359,7 @@
   let _destinosData = { abiertos: [], colectas: [], transportistas: [], max_abiertos: 2 };
   let _camionesData = [];
   let _colectasHoy = [];
+  let _pickerHorario = '', _pickerManual = false;
 
   async function cargarDestinos(){
     const st = document.getElementById('status-destinos');
@@ -1412,12 +1413,25 @@
     } else {
       const flexAbiertos = abiertos.filter(d=>d.tipo==='flex').map(d=>d.transportista);
       const transp = (_destinosData.transportistas || []).filter(t => !flexAbiertos.includes(t));
-      // Colectas: se crean a demanda y se numeran solas (Colecta 1, Colecta 2, …)
-      opt += `<div class="opciones-h">Colectas de ML</div>`;
+      // Colectas de hoy: las franjas que informa ML, cada una para abrir por su horario
+      opt += `<div class="opciones-h">Colectas de hoy (Mercado Libre)</div>`;
+      const franjas = _colectasHoy || [];
+      if(franjas.length){
+        for(const c of franjas){
+          const h = `${c.from}–${c.to}`;
+          const yaAbierta = abiertos.some(d => d.tipo==='colecta' && (d.colecta_horario||'')===h);
+          opt += `<div class="opt-row"><span class="opt-ico opt-ico-colecta"></span>
+            <div><div class="opt-nombre">Colecta ${esc(h)}</div>
+            <div class="opt-meta">${c.cutoff?'corte '+esc(c.cutoff):'sin corte'}${yaAbierta?' · ya abierta':''}</div></div>
+            <button class="btn-abrir" onclick="abrirColectaHorario('${esc(h)}', ${yaAbierta?'true':'false'})">Abrir</button></div>`;
+        }
+      } else {
+        opt += `<div class="opt-meta" style="padding:4px 0 8px">ML no informó colectas para hoy. Podés abrir una manual abajo.</div>`;
+      }
       opt += `<div class="opt-row"><span class="opt-ico opt-ico-colecta"></span>
-        <div><div class="opt-nombre">Crear nueva colecta</div>
-        <div class="opt-meta">se le asigna un camión (patente)</div></div>
-        <button class="btn-abrir" onclick="abrirColecta()">Abrir</button></div>`;
+        <div><div class="opt-nombre">+ Colecta manual</div>
+        <div class="opt-meta">escribís el horario vos</div></div>
+        <button class="btn-abrir" onclick="abrirColectaManual()">Abrir</button></div>`;
       if(transp.length){
         opt += `<div class="opciones-h">Transportistas Flex</div>`;
         for(const t of transp){
@@ -1473,35 +1487,30 @@
     }catch(e){ _camionesData = []; }
   }
 
-  async function abrirColecta(){
+  async function abrirColectaHorario(horario, yaAbierta){
+    if(yaAbierta && !confirm(`Ya hay una Colecta ${horario} abierta. ¿Querés abrir otra vez la Colecta ${horario}?`)) return;
     await cargarCamiones();
-    if(!_colectasHoy.length){
-      try{ const r=await authFetch(`${API}/api/despacho/colectas`); const d=await r.json();
-        if(r.ok) _colectasHoy=(d.colectas||[]).filter(c=>c.tanda==='colecta'); }catch(_){}
-    }
-    renderPicker(null);
+    renderPicker(horario, false);
   }
-  function cpHorarioChange(){
-    const sel=document.getElementById('cp-horario');
-    const man=document.getElementById('cp-horario-manual');
-    if(sel && man) man.style.display = (sel.value==='__manual__') ? 'block' : 'none';
+  async function abrirColectaManual(){
+    await cargarCamiones();
+    renderPicker('', true);
   }
 
-  function renderPicker(preselectId){
+  function renderPicker(horario, manual){
+    _pickerHorario = horario || ''; _pickerManual = !!manual;
     const opts = _camionesData.map(c =>
-      `<option value="${c.id}"${String(c.id)===String(preselectId)?' selected':''}>${esc(c.patente)}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
-    const franjas = _colectasHoy.map(c =>
-      `<option value="${esc(c.from)}–${esc(c.to)}">${esc(c.from)}–${esc(c.to)}${c.cutoff?` (corte ${esc(c.cutoff)})`:''}</option>`).join('');
-    const sinFranjas = !_colectasHoy.length;
+      `<option value="${c.id}">${esc(c.patente)}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
+    const horarioBlock = manual
+      ? `<label>Horario de la colecta</label>
+         <input id="cp-horario-manual" placeholder="Ej. 10:00–12:00" maxlength="20" value="${esc(horario||'')}">`
+      : `<label>Colecta</label>
+         <div class="cp-fixed">Colecta ${esc(horario)}</div>
+         <input type="hidden" id="cp-horario-fixed" value="${esc(horario)}">`;
     const m = document.getElementById('camion-picker');
     m.innerHTML = `<div class="cp-box">
-      <h3>Nueva colecta</h3>
-      <label>Horario de la colecta</label>
-      <select id="cp-horario" onchange="cpHorarioChange()">
-        ${franjas}
-        <option value="__manual__"${sinFranjas?' selected':''}>✏️ Otra (la escribo yo)</option>
-      </select>
-      <input id="cp-horario-manual" placeholder="Ej. 14:00–16:00" maxlength="20" style="display:${sinFranjas?'block':'none'}; margin-top:8px">
+      <h3>Abrir colecta</h3>
+      ${horarioBlock}
       <label style="margin-top:12px">Elegí un camión guardado</label>
       <select id="cp-select">${opts || '<option value="">— todavía no guardaste camiones —</option>'}</select>
       <div class="cp-or">— o cargá uno nuevo —</div>
@@ -1532,18 +1541,22 @@
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo guardar');
       await cargarCamiones();
-      renderPicker(d.camion ? d.camion.id : null);  // re-render con el nuevo elegido
+      // Preservar el horario que se estaba cargando
+      let h = _pickerHorario;
+      const man = document.getElementById('cp-horario-manual'); if(man) h = man.value;
+      renderPicker(h, _pickerManual);
+      const selN = document.getElementById('cp-select'); if(selN && d.camion) selN.value = d.camion.id;
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
   async function confirmarAbrirColecta(){
     const sel = document.getElementById('cp-select');
     const camionId = sel && sel.value ? sel.value : null;
-    const selH = document.getElementById('cp-horario');
-    let horario = selH ? selH.value : '';
-    if(horario === '__manual__') horario = (document.getElementById('cp-horario-manual').value||'').trim();
+    const fixed = document.getElementById('cp-horario-fixed');
+    const man = document.getElementById('cp-horario-manual');
+    let horario = fixed ? fixed.value : (man ? (man.value||'').trim() : '');
     const st = document.getElementById('cp-status');
-    if(!horario){ st.className='status err'; st.textContent='Elegí o escribí el horario de la colecta.'; return; }
+    if(!horario){ st.className='status err'; st.textContent='Escribí el horario de la colecta.'; return; }
     st.className='status'; st.textContent='Abriendo…';
     try{
       const r = await authFetch(`${API}/api/despacho/destinos/abrir`, {
@@ -1637,31 +1650,11 @@
   }
 
   async function cargarColectaHoy(){
-    const out = document.getElementById('colecta-hoy');
-    if(!out) return;
-    out.innerHTML = '<div class="status">Consultando la colecta de hoy…</div>';
     try{
       const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
-      if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
-      const cols = (d.colectas || []).filter(c => c.tanda === 'colecta');
-      _colectasHoy = cols;
-      let html = '<div class="colecta-hoy-h">📦 Colecta de hoy</div>';
-      if(!cols.length){
-        html += '<div class="colecta-nopasa">🚫 Hoy no pasa la colecta.</div>';
-      } else {
-        html += '<div class="colectas-grid">';
-        for(const c of cols){
-          const quien = c.carrier
-            ? `Retira: <b>${esc(c.carrier)}</b>${c.patente?` · Patente <b>${esc(c.patente)}</b>`:''}${c.vehiculo?` · ${esc(c.vehiculo)}`:''}${c.chofer?` · ${esc(c.chofer)}`:''}`
-            : '<span style="color:var(--muted2)">ML todavía no asignó el camión.</span>';
-          html += `<div class="ccard">
-            <div class="ch"><span class="hora">${esc(c.from)}–${esc(c.to)}</span><span class="corte">corte ${esc(c.cutoff)||'—'}</span></div>
-            <div class="dest-sub" style="margin-top:6px">${quien}</div></div>`;
-        }
-        html += '</div>';
-      }
-      out.innerHTML = html;
-    }catch(e){ out.innerHTML = '<div class="status err">No se pudo consultar la colecta: '+esc(e.message)+'</div>'; }
+      if(r.ok) _colectasHoy = (d.colectas || []).filter(c => c.tanda === 'colecta');
+    }catch(e){ /* si falla, dejamos lo que haya */ }
+    if(_destinosData && _destinosData.abiertos) renderDestinos();
   }
 
   // Diagnóstico: ¿multi-origen? ¿qué id (usuario/nodo) trae el transportista?
