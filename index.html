@@ -171,6 +171,33 @@
   .scan-test{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted2); cursor:pointer}
   .scan-bajar{font-weight:700; color:var(--err)}
   .app-ver{font-size:11px; font-weight:700; color:var(--muted); background:#EFEFEF; padding:2px 7px; border-radius:8px; vertical-align:middle; margin-left:4px}
+  .btn-fs{width:100%; margin:4px 0 12px; padding:12px; background:var(--ink); color:#fff; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer}
+  .colecta-hoy-h{font-weight:700; font-size:14px; margin-bottom:8px}
+  .colecta-nopasa{background:#FDECEC; border:1px solid #F3B1B6; color:#B42318; border-radius:8px; padding:10px 12px; font-weight:600; font-size:14px}
+  /* Pantalla completa */
+  .fs{position:fixed; inset:0; z-index:9999; background:#0F1115; color:#fff; display:flex; flex-direction:column}
+  .fs.fs-bajando{background:#3a0f12}
+  .fs-top{display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid rgba(255,255,255,.12)}
+  .fs-dest{font-size:clamp(20px,3.5vw,40px); font-weight:800}
+  .fs-top-actions{display:flex; align-items:center; gap:16px}
+  .fs-bajar{display:flex; align-items:center; gap:8px; font-size:clamp(14px,1.6vw,20px); font-weight:700; color:#FF6B6B; cursor:pointer}
+  .fs-bajar input{width:22px; height:22px}
+  .fs-salir{background:rgba(255,255,255,.14); color:#fff; border:none; border-radius:10px; padding:12px 20px; font-size:clamp(14px,1.6vw,20px); font-weight:700; cursor:pointer}
+  .fs-body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:20px}
+  .fs-nums{display:flex; align-items:flex-end; gap:clamp(24px,6vw,90px); width:100%; justify-content:center}
+  .fs-esc{text-align:center} .fs-pend{text-align:center}
+  .fs-n{font-size:clamp(140px,32vw,460px); font-weight:900; line-height:.9; color:#34D399}
+  .fs-n2{font-size:clamp(70px,14vw,210px); font-weight:900; line-height:.9; color:#F87171}
+  .fs-l{font-size:clamp(16px,2.4vw,30px); color:rgba(255,255,255,.7); font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+  .fs-input{width:min(680px,90%); padding:18px 22px; font-size:clamp(18px,2.4vw,26px); border-radius:12px; border:2px solid rgba(255,255,255,.25); background:rgba(255,255,255,.06); color:#fff; text-align:center}
+  .fs-input::placeholder{color:rgba(255,255,255,.45)}
+  .fs-flash{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; opacity:0; pointer-events:none; transition:opacity .08s}
+  .fs-flash.show{opacity:1}
+  .fs-flash.fs-ok{background:rgba(16,185,129,.92)}
+  .fs-flash.fs-err{background:rgba(220,38,38,.94)}
+  .fs-flash.fs-warn{background:rgba(245,158,11,.94)}
+  .fs-big{font-size:clamp(60px,12vw,180px); font-weight:900; line-height:1; text-align:center}
+  .fs-det{font-size:clamp(20px,3vw,40px); font-weight:700; text-align:center; padding:0 20px}
   .bajar-banner{background:#FDECEC; border:1px solid #F3B1B6; color:#B42318; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:13px; line-height:1.45}
   .dcard.modo-bajar{outline:3px solid var(--err); outline-offset:2px}
   .dcard.modo-bajar .scan-row input{border-color:var(--err)}
@@ -385,7 +412,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v23</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v24</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -457,20 +484,16 @@
             <h2>Destinos</h2>
             <button class="btn-light" onclick="cargarDestinos()">↻</button>
           </div>
-          <p class="hint">Hasta <b>2 destinos</b> abiertos. <b>Colecta</b> lleva camión; <b>Flex</b> (Ruedo, Gustavo) se entrega en mano. No deja mezclar Flex con Colecta.</p>
           <div class="status" id="status-destinos"></div>
           <div id="destinos-abiertos"></div>
           <div id="destinos-opciones"></div>
-          <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px">
-            <button class="btn-light" onclick="verColectaML()">🔎 ¿Quién retira hoy?</button>
-            <button class="btn-light" onclick="diagNodo()" style="margin-top:8px">🔧 Diagnóstico por nodo</button>
-            <div id="colecta-ml-info" style="margin-top:10px"></div>
-          </div>
+          <div id="colecta-hoy" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px"></div>
         </div>
 
         <!-- DERECHA: verificador -->
         <div class="dcard desp-verif">
           <div id="destino-bar" class="destino-bar destino-bar-vacio">Elegí o abrí un destino a la izquierda para empezar a cargar paquetes.</div>
+          <button class="btn-fs" id="btn-fs" onclick="abrirFS()">⛶ Pantalla completa (para cargar el camión de lejos)</button>
           <div id="bajar-banner" class="bajar-banner" style="display:none">🔽 MODO BAJAR activo — escaneá el paquete que querés <b>sacar</b> de la colecta. Acordate de apagarlo después.</div>
           <div class="gun-label">▸ Pistola lectora (recomendado)</div>
           <div class="scan-row">
@@ -598,6 +621,27 @@
     </button>
   </nav>
 </div>
+
+<!-- ===== Pantalla completa para cargar el camión ===== -->
+<div id="fs" class="fs" style="display:none">
+  <div class="fs-top">
+    <div class="fs-dest" id="fs-dest">—</div>
+    <div class="fs-top-actions">
+      <label class="fs-bajar"><input type="checkbox" id="fs-modo-bajar" onchange="fsToggleBajar()"> 🔽 Bajar de la colecta</label>
+      <button class="fs-salir" onclick="cerrarFS()">✕ Salir</button>
+    </div>
+  </div>
+  <div class="fs-body">
+    <div class="fs-nums">
+      <div class="fs-esc"><div class="fs-n" id="fs-count">0</div><div class="fs-l" id="fs-count-l">escaneados</div></div>
+      <div class="fs-pend"><div class="fs-n2" id="fs-pend">0</div><div class="fs-l">faltan</div></div>
+    </div>
+    <input id="fs-input" class="fs-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
+           onkeydown="if(event.key==='Enter'){ escanear(this.value); this.value=''; }">
+  </div>
+  <div id="fs-flash" class="fs-flash"></div>
+</div>
+
 <script>
   const API = "https://depositoml-backend-production.up.railway.app";
 
@@ -705,7 +749,7 @@
     const v = document.getElementById('view-'+name);
     if(v) v.classList.add('active');
     if(name === 'despachar'){
-      cargarDestinos(); cargarDespachados();
+      cargarDestinos(); cargarDespachados(); cargarColectaHoy();
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
     } else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Despachar
     if(name === 'imprimir') cargarSeparables();
@@ -948,7 +992,45 @@
     if(card) card.classList.toggle('modo-bajar', on);
     // No tiene sentido "bajar" y "test" a la vez
     if(on){ const t=document.getElementById('modo-test'); if(t && t.checked){ t.checked=false; actualizarHintTest(); } }
-    const inp=document.getElementById('scan-input'); if(inp) inp.focus();
+    // Sincronizar con el toggle de pantalla completa
+    const fmb=document.getElementById('fs-modo-bajar'); if(fmb) fmb.checked=on;
+    const fs=document.getElementById('fs'); if(fs) fs.classList.toggle('fs-bajando', on);
+    reenfocar();
+  }
+
+  // ---------- Pantalla completa (cargar el camión de lejos) ----------
+  function fsAbierto(){ const f=document.getElementById('fs'); return f && f.style.display!=='none'; }
+  function abrirFS(){
+    if(!_destinoActivo){ alert('Primero elegí o abrí un destino (Colecta o Flex) a la izquierda.'); return; }
+    const mb=document.getElementById('modo-bajar');
+    const fmb=document.getElementById('fs-modo-bajar'); if(fmb && mb) fmb.checked=mb.checked;
+    const fs=document.getElementById('fs');
+    fs.classList.toggle('fs-bajando', mb && mb.checked);
+    fs.style.display='flex';
+    pintarStats();
+    setTimeout(()=>{ const fi=document.getElementById('fs-input'); if(fi) fi.focus(); }, 60);
+  }
+  function cerrarFS(){
+    const fs=document.getElementById('fs'); if(fs) fs.style.display='none';
+    const si=document.getElementById('scan-input'); if(si) si.focus();
+  }
+  function fsToggleBajar(){
+    const on=document.getElementById('fs-modo-bajar').checked;
+    const mb=document.getElementById('modo-bajar'); if(mb) mb.checked=on;
+    toggleBajar();
+    const fi=document.getElementById('fs-input'); if(fi) fi.focus();
+  }
+  function mostrarFS(tipo, big, det){
+    if(!fsAbierto()) return;
+    const fl=document.getElementById('fs-flash');
+    fl.className='fs-flash fs-'+tipo+' show';
+    fl.innerHTML=`<div class="fs-big">${big}</div>${det?`<div class="fs-det">${det}</div>`:''}`;
+    clearTimeout(window._fsT); window._fsT=setTimeout(()=>{ fl.classList.remove('show'); }, 1700);
+  }
+  function reenfocar(){
+    const si=document.getElementById('scan-input'); if(si) si.value='';
+    if(fsAbierto()){ const fi=document.getElementById('fs-input'); if(fi){ fi.value=''; fi.focus(); } }
+    else if(si) si.focus();
   }
 
   let _torchOn = false;
@@ -1091,11 +1173,11 @@
         const d=await r.json();
         if(!r.ok) throw new Error(d.error||'No se pudo bajar');
         if(d.resultado==='no_estaba'){
-          beep(true); flashCam('warn');
+          beep(true); flashCam('warn'); mostrarFS('warn','No estaba', 'Ese paquete no estaba cargado');
           out.innerHTML=`<div class="scan-card scan-warn"><div class="big">No estaba cargado</div>
             <div class="det">Ese paquete no figura en ninguna colecta/destino. Nada que bajar.</div></div>`;
         } else {
-          beep(false); flashCam('warn');
+          beep(false); flashCam('warn'); mostrarFS('warn','🔽 Bajado', `${esc(d.sku)||''} · venta ${esc(d.nro_venta)||''}`);
           out.innerHTML=`<div class="scan-card scan-warn"><div class="big">🔽 Bajado de la colecta</div>
             <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
             Venta <span class="mono">${esc(d.nro_venta)||'—'}</span>${d.destino_nombre?' · sacado de <b>'+esc(d.destino_nombre)+'</b>':''}<br>
@@ -1103,9 +1185,9 @@
           cargarDespachados(); cargarDestinos();
         }
       }catch(e){
-        beep(true);
+        beep(true); mostrarFS('err','Error', esc(e.message));
         out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">Error</div><div class="det">${esc(e.message)}</div></div>`;
-      }finally{ btn.disabled=false; input.value=''; input.focus(); }
+      }finally{ btn.disabled=false; reenfocar(); }
       return;
     }
 
@@ -1117,18 +1199,18 @@
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo verificar');
       if(d.resultado==='cancelada'){
-        beep(true); flashCam('err');
+        beep(true); flashCam('err'); mostrarFS('err','⛔ CANCELADA', `Apartá esta venta · ${esc(d.nro_venta)||''}`);
         out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">⛔ No despachar · cancelada</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
           Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> — bajala del camión y apartala.</div></div>`;
       } else if(d.resultado==='tipo_incorrecto'){
-        beep(true); flashCam('err');
+        beep(true); flashCam('err'); mostrarFS('err','⛔ Destino equivocado', `Es ${esc((d.recibido||'').toUpperCase())}, no ${esc((d.esperado||'').toUpperCase())}`);
         out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">⛔ Destino equivocado</div>
           <div class="det">Este paquete es <b>${esc((d.recibido||'').toUpperCase())}</b> y el destino abierto es <b>${esc((d.esperado||'').toUpperCase())}</b>.<br>
           <b>${esc(d.sku)||'SIN SKU'}</b> · Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br>
           Cargalo al destino que corresponde.</div></div>`;
       } else if(d.resultado==='duplicada'){
-        beep(true); flashCam('warn');
+        beep(true); flashCam('warn'); mostrarFS('warn','Ya escaneada', `${esc(d.sku)||''} · venta ${esc(d.nro_venta)||''}`);
         out.innerHTML=`<div class="scan-card scan-warn"><div class="big">Ya estaba escaneada</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br>
           Se escaneó el ${d.despachado_at?new Date(d.despachado_at).toLocaleString('es-AR'):'—'}${d.usuario?' por '+esc(d.usuario):''}.</div></div>`;
@@ -1141,6 +1223,7 @@
         if(t && _porTipo[t]){ _porTipo[t].escaneadas++; _porTipo[t].pendientes = Math.max(0, _porTipo[t].pendientes - 1); }
         pintarStats();
         const conAviso = (d.resultado === 'ok_aviso') && d.aviso;
+        mostrarFS(conAviso?'warn':'ok', conAviso?'✓ Revisá':'✓ OK', `${esc(d.sku)||''} · venta ${esc(d.nro_venta)||''}${d.aviso?'<br>⚠ '+esc(d.aviso):''}`);
         const dest = d.destino_nombre ? ` → <b>${esc(d.destino_nombre)}</b>` : '';
         out.innerHTML=`<div class="scan-card ${conAviso?'scan-warn':'scan-ok'}"><div class="big">✓ Cargada${conAviso?' · revisá' : ''}</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
@@ -1148,10 +1231,10 @@
         cargarDespachados(); cargarDestinos();
       }
     }catch(e){
-      beep(true);
+      beep(true); mostrarFS('err','Error', esc(e.message));
       out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">Error</div>
         <div class="det">${esc(e.message)}</div></div>`;
-    }finally{ btn.disabled=false; input.value=''; input.focus(); }
+    }finally{ btn.disabled=false; reenfocar(); }
   }
   async function cargarDespachados(){
     const st=document.getElementById('status-verif');
@@ -1228,6 +1311,11 @@
     if(pen) pen.textContent = tp.pendientes || 0;              // faltan del tipo (total)
     if(penL) penL.textContent = 'faltan · ' + nombre;
     if(cam) cam.textContent = dd.cargados || 0;
+    // Pantalla completa
+    const fc=document.getElementById('fs-count'), fp=document.getElementById('fs-pend'), fd=document.getElementById('fs-dest');
+    if(fc) fc.textContent = dd.cargados || 0;
+    if(fp) fp.textContent = tp.pendientes || 0;
+    if(fd) fd.textContent = (dd.nombre || nombre) + ' · ' + nombre;
   }
   // Destello grande sobre la cámara: verde ✓ (ok), rojo ✗ (cancelada/error), ámbar ! (duplicada)
   function flashCam(tipo){
@@ -1431,26 +1519,31 @@
   }
 
   // ¿Quién retira hoy? — muestra lo que ML informa de la colecta del día
-  async function verColectaML(){
-    const out = document.getElementById('colecta-ml-info');
-    out.innerHTML = '<div class="status">Consultando a Mercado Libre…</div>';
+  async function cargarColectaHoy(){
+    const out = document.getElementById('colecta-hoy');
+    if(!out) return;
+    out.innerHTML = '<div class="status">Consultando la colecta de hoy…</div>';
     try{
       const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
       const cols = (d.colectas || []).filter(c => c.tanda === 'colecta');
-      if(!cols.length){ out.innerHTML = '<div class="status">ML no tiene colectas programadas para hoy.</div>'; return; }
-      let html = '<div class="colectas-grid">';
-      for(const c of cols){
-        const quien = c.carrier
-          ? `Retira: <b>${esc(c.carrier)}</b>${c.patente?` · Patente <b>${esc(c.patente)}</b>`:''}${c.vehiculo?` · ${esc(c.vehiculo)}`:''}${c.chofer?` · ${esc(c.chofer)}`:''}`
-          : '<span style="color:var(--muted2)">ML todavía no asignó el camión/transportista para esta colecta.</span>';
-        html += `<div class="ccard">
-          <div class="ch"><span class="hora">${esc(c.from)}–${esc(c.to)}</span><span class="corte">corte ${esc(c.cutoff)||'—'}</span></div>
-          <div class="dest-sub" style="margin-top:6px">${quien}</div></div>`;
+      let html = '<div class="colecta-hoy-h">📦 Colecta de hoy</div>';
+      if(!cols.length){
+        html += '<div class="colecta-nopasa">🚫 Hoy no pasa la colecta.</div>';
+      } else {
+        html += '<div class="colectas-grid">';
+        for(const c of cols){
+          const quien = c.carrier
+            ? `Retira: <b>${esc(c.carrier)}</b>${c.patente?` · Patente <b>${esc(c.patente)}</b>`:''}${c.vehiculo?` · ${esc(c.vehiculo)}`:''}${c.chofer?` · ${esc(c.chofer)}`:''}`
+            : '<span style="color:var(--muted2)">ML todavía no asignó el camión.</span>';
+          html += `<div class="ccard">
+            <div class="ch"><span class="hora">${esc(c.from)}–${esc(c.to)}</span><span class="corte">corte ${esc(c.cutoff)||'—'}</span></div>
+            <div class="dest-sub" style="margin-top:6px">${quien}</div></div>`;
+        }
+        html += '</div>';
       }
-      html += '</div>';
       out.innerHTML = html;
-    }catch(e){ out.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+    }catch(e){ out.innerHTML = '<div class="status err">No se pudo consultar la colecta: '+esc(e.message)+'</div>'; }
   }
 
   // Diagnóstico: ¿multi-origen? ¿qué id (usuario/nodo) trae el transportista?
