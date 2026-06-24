@@ -334,6 +334,17 @@
   .seg-fbtn{padding:6px 16px; border:1px solid var(--line2); background:#fff; border-radius:999px; font-size:13px; font-weight:600; color:var(--muted2); cursor:pointer}
   .seg-fbtn.active{background:var(--ink); color:#fff; border-color:var(--ink)}
   .hist-controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .tab-config{font-size:18px; padding-left:10px; padding-right:10px}
+  .cam-form{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0}
+  .cam-form input{padding:10px 12px; border:1px solid var(--line2); border-radius:8px; font-size:14px}
+  .cam-form input#cam-pat{width:160px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; font-weight:700}
+  .cam-form input#cam-chofer{flex:1; min-width:200px}
+  .cam-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1px solid var(--line2); border-radius:9px; margin-bottom:8px}
+  .cam-row .cam-pat{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; min-width:90px}
+  .cam-row .cam-desc{flex:1; color:var(--muted2)}
+  .cam-row .cam-acts{display:flex; gap:6px}
+  .cam-row .cam-acts button{padding:6px 12px; border-radius:7px; border:1px solid var(--line2); background:var(--surface); font-weight:600; font-size:13px; cursor:pointer}
+  .cam-row .cam-acts .del{color:var(--err); border-color:#F3B1B6}
   .hist-controls input{padding:9px 12px; border:1px solid var(--line2); border-radius:8px; font-size:14px}
   .hist-controls input[type=text]{flex:1; min-width:160px}
   .hist-tot{font-size:14px; margin-bottom:12px; font-weight:600}
@@ -412,7 +423,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v24</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v25</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -421,6 +432,7 @@
       <button class="tab active" data-tab="imprimir" onclick="verTab('imprimir')">Imprimir <span class="badge badge-imprimir" style="display:none">0</span></button>
       <button class="tab" data-tab="despachar" onclick="verTab('despachar')">Despachar <span class="badge badge-despachar" style="display:none">0</span></button>
       <button class="tab" data-tab="seguimiento" onclick="verTab('seguimiento')">Seguimiento</button>
+      <button class="tab tab-config" data-tab="config" onclick="verTab('config')">⚙</button>
     </nav>
   </header>
 
@@ -580,6 +592,24 @@
           <button class="btn-light" onclick="buscarVentaHist()">Buscar venta</button>
         </div>
         <div id="hist-result" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- ===== CONFIGURACIÓN ===== -->
+    <section id="view-config" class="view">
+      <div class="card-box">
+        <div class="seg-head">
+          <h2>🚚 Camiones de la colecta</h2>
+          <button class="btn-light" onclick="cargarConfigCamiones()">↻</button>
+        </div>
+        <p class="hint">Guardá acá los camiones que retiran la colecta (patente + chofer). Después, al abrir una Colecta, los elegís de la lista. Mercado Libre no nos pasa estos datos por API, por eso los administrás vos.</p>
+        <div class="cam-form">
+          <input type="text" id="cam-pat" placeholder="Patente (ej. JZF500)" autocomplete="off" maxlength="12">
+          <input type="text" id="cam-chofer" placeholder="Chofer / descripción (ej. Delfina Rodríguez)" autocomplete="off">
+          <button class="btn-scan" onclick="addCamionConfig()">Agregar</button>
+        </div>
+        <div class="status" id="cam-status"></div>
+        <div id="cam-lista"></div>
       </div>
     </section>
 
@@ -757,6 +787,7 @@
       const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
     }
+    if(name === 'config') cargarConfigCamiones();
     window.scrollTo(0, 0);
   }
   // Contadores numéricos en las pestañas (estilo ML)
@@ -1519,6 +1550,69 @@
   }
 
   // ¿Quién retira hoy? — muestra lo que ML informa de la colecta del día
+  // ---------- Configuración: base de camiones ----------
+  async function cargarConfigCamiones(){
+    const cont=document.getElementById('cam-lista'); const st=document.getElementById('cam-status');
+    if(!cont) return;
+    st.className='status'; st.textContent='Cargando camiones…';
+    try{
+      const r=await authFetch(`${API}/api/despacho/camiones`); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo cargar');
+      _camionesData = d.camiones || [];
+      st.textContent='';
+      if(!_camionesData.length){ cont.innerHTML='<div class="status">Todavía no guardaste ningún camión. Agregá el primero arriba.</div>'; return; }
+      let html='';
+      for(const c of _camionesData){
+        html+=`<div class="cam-row">
+          <span class="cam-pat">${esc(c.patente)}</span>
+          <span class="cam-desc">${esc(c.descripcion)||'<i>sin chofer</i>'}</span>
+          <span class="cam-acts">
+            <button onclick="editarCamion('${c.id}')">Editar</button>
+            <button class="del" onclick="borrarCamion('${c.id}','${esc(c.patente)}')">Borrar</button>
+          </span></div>`;
+      }
+      cont.innerHTML=html;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+  async function addCamionConfig(){
+    const pat=(document.getElementById('cam-pat').value||'').trim();
+    const chofer=(document.getElementById('cam-chofer').value||'').trim();
+    const st=document.getElementById('cam-status');
+    if(!pat){ st.className='status err'; st.textContent='Escribí la patente.'; return; }
+    st.className='status'; st.textContent='Guardando…';
+    try{
+      const r=await authFetch(`${API}/api/despacho/camiones`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({patente:pat, descripcion:chofer})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo guardar');
+      document.getElementById('cam-pat').value=''; document.getElementById('cam-chofer').value='';
+      if(d.existia) st.textContent='Esa patente ya estaba guardada.'; else st.textContent='';
+      cargarConfigCamiones();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+  async function editarCamion(id){
+    const c=_camionesData.find(x=>String(x.id)===String(id)); if(!c) return;
+    const pat=prompt('Patente:', c.patente); if(pat===null) return;
+    const chofer=prompt('Chofer / descripción:', c.descripcion||''); if(chofer===null) return;
+    try{
+      const r=await authFetch(`${API}/api/despacho/camiones/editar`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({id, patente:pat.trim(), descripcion:chofer.trim()})});
+      const d=await r.json(); if(!r.ok) throw new Error(d.error||'');
+      cargarConfigCamiones();
+    }catch(e){ const st=document.getElementById('cam-status'); st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+  async function borrarCamion(id, patente){
+    if(!confirm(`¿Borrar el camión ${patente}? No afecta el historial ya guardado.`)) return;
+    try{
+      const r=await authFetch(`${API}/api/despacho/camiones/borrar`,{
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})});
+      const d=await r.json(); if(!r.ok) throw new Error(d.error||'');
+      cargarConfigCamiones();
+    }catch(e){ const st=document.getElementById('cam-status'); st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
   async function cargarColectaHoy(){
     const out = document.getElementById('colecta-hoy');
     if(!out) return;
