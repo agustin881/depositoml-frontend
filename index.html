@@ -428,7 +428,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v31</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v32</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1720,7 +1720,7 @@
         filas += `<div class="sep-row">
           <input type="checkbox" class="sep-chk" value="${esc(s.shipment_id)}" onchange="updateSepCount()">
           <div class="sep-id"><span class="sku">${(s.skus && s.skus.length ? s.skus.map(x=>esc(x)).join(' + ') : (esc(s.sku)||'SIN SKU'))}</span><span class="venta">#${esc(s.nro_venta)||'—'}</span></div>
-          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)||''}${s.impresa?' <span class="impresa-tag">(ya impresa)</span>':''}${(s.productos>1)?` <span class="sep-estado">${s.productos} productos distintos</span>`:''}</span>
+          <span class="ti" title="${esc((s.titulos&&s.titulos.length?s.titulos.join('  +  '):s.titulo)||'')}">${(s.productos>1 && s.titulos && s.titulos.length>1) ? s.titulos.map(t=>esc(t.length>38?t.slice(0,38)+'…':t)).join('  +  ') : (esc(s.titulo)||'')}${s.impresa?' <span class="impresa-tag">(ya impresa)</span>':''}${(s.productos>1)?` <span class="sep-estado">${s.productos} productos distintos</span>`:''}</span>
           <span class="uds">${s.unidades} u</span>
           <button class="btn-sep" onclick="separarVenta('${esc(s.shipment_id)}','${esc(s.nro_venta)}',${s.unidades},${s.impresa?'true':'false'})">Separar</button>
         </div>`;
