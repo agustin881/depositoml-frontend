@@ -423,7 +423,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v25</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v26</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1358,6 +1358,7 @@
   }
   let _destinosData = { abiertos: [], colectas: [], transportistas: [], max_abiertos: 2 };
   let _camionesData = [];
+  let _colectasHoy = [];
 
   async function cargarDestinos(){
     const st = document.getElementById('status-destinos');
@@ -1474,21 +1475,39 @@
 
   async function abrirColecta(){
     await cargarCamiones();
+    if(!_colectasHoy.length){
+      try{ const r=await authFetch(`${API}/api/despacho/colectas`); const d=await r.json();
+        if(r.ok) _colectasHoy=(d.colectas||[]).filter(c=>c.tanda==='colecta'); }catch(_){}
+    }
     renderPicker(null);
+  }
+  function cpHorarioChange(){
+    const sel=document.getElementById('cp-horario');
+    const man=document.getElementById('cp-horario-manual');
+    if(sel && man) man.style.display = (sel.value==='__manual__') ? 'block' : 'none';
   }
 
   function renderPicker(preselectId){
     const opts = _camionesData.map(c =>
       `<option value="${c.id}"${String(c.id)===String(preselectId)?' selected':''}>${esc(c.patente)}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
+    const franjas = _colectasHoy.map(c =>
+      `<option value="${esc(c.from)}–${esc(c.to)}">${esc(c.from)}–${esc(c.to)}${c.cutoff?` (corte ${esc(c.cutoff)})`:''}</option>`).join('');
+    const sinFranjas = !_colectasHoy.length;
     const m = document.getElementById('camion-picker');
     m.innerHTML = `<div class="cp-box">
-      <h3>Asignar camión · Nueva colecta</h3>
-      <label>Elegí un camión guardado</label>
+      <h3>Nueva colecta</h3>
+      <label>Horario de la colecta</label>
+      <select id="cp-horario" onchange="cpHorarioChange()">
+        ${franjas}
+        <option value="__manual__"${sinFranjas?' selected':''}>✏️ Otra (la escribo yo)</option>
+      </select>
+      <input id="cp-horario-manual" placeholder="Ej. 14:00–16:00" maxlength="20" style="display:${sinFranjas?'block':'none'}; margin-top:8px">
+      <label style="margin-top:12px">Elegí un camión guardado</label>
       <select id="cp-select">${opts || '<option value="">— todavía no guardaste camiones —</option>'}</select>
       <div class="cp-or">— o cargá uno nuevo —</div>
       <div class="cp-new">
         <input id="cp-pat" placeholder="Patente" maxlength="12">
-        <input id="cp-desc" placeholder="Descripción (ej. Mercedes blanco)">
+        <input id="cp-desc" placeholder="Chofer / descripción">
         <button class="btn-light" onclick="agregarCamion()">Guardar</button>
       </div>
       <div class="status" id="cp-status"></div>
@@ -1520,12 +1539,16 @@
   async function confirmarAbrirColecta(){
     const sel = document.getElementById('cp-select');
     const camionId = sel && sel.value ? sel.value : null;
+    const selH = document.getElementById('cp-horario');
+    let horario = selH ? selH.value : '';
+    if(horario === '__manual__') horario = (document.getElementById('cp-horario-manual').value||'').trim();
     const st = document.getElementById('cp-status');
+    if(!horario){ st.className='status err'; st.textContent='Elegí o escribí el horario de la colecta.'; return; }
     st.className='status'; st.textContent='Abriendo…';
     try{
       const r = await authFetch(`${API}/api/despacho/destinos/abrir`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ tipo:'colecta', camion_id:camionId }) });
+        body: JSON.stringify({ tipo:'colecta', camion_id:camionId, horario }) });
       const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo abrir');
       if(d.destino) _destinoActivo = d.destino.id;
@@ -1621,6 +1644,7 @@
       const r = await authFetch(`${API}/api/despacho/colectas`); const d = await r.json();
       if(!r.ok) throw new Error(d.error || 'No se pudo consultar');
       const cols = (d.colectas || []).filter(c => c.tanda === 'colecta');
+      _colectasHoy = cols;
       let html = '<div class="colecta-hoy-h">📦 Colecta de hoy</div>';
       if(!cols.length){
         html += '<div class="colecta-nopasa">🚫 Hoy no pasa la colecta.</div>';
