@@ -407,6 +407,11 @@
     body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
   }
   /* ===== Pulido visual general ===== */
+  .faltan-det{margin-top:6px}
+  .faltan-sum{cursor:pointer; list-style:none; color:var(--err); display:flex; align-items:center; gap:6px;
+    background:#FDECEC; border:1px solid #F3B1B6; border-radius:10px; padding:9px 12px; font-size:12px; letter-spacing:0; text-transform:none}
+  .faltan-sum::-webkit-details-marker{display:none}
+  .faltan-det[open] .faltan-sum{border-bottom-left-radius:0; border-bottom-right-radius:0}
   .panel, .card-box, .dcard, .buscar-wrap, .seg-card, .seg-sec, .rcard, .placeholder{
     border:1px solid rgba(20,22,28,.05)}
   .tab{transition:color .12s, border-color .12s}
@@ -425,6 +430,18 @@
     .scan-modo-btn, .btn-sel, .vivo-refresh{padding:12px 16px}
     .selrow, .sep-row{font-size:13px}
     .stat-n{font-size:44px}
+    /* Filas de "separar": en celu priorizamos SKU + cantidad (el título se omite) */
+    .sep-row{grid-template-columns:auto 1fr auto auto; gap:9px; padding:11px 2px}
+    .sep-row .ti{display:none}
+    .sep-row .sku{white-space:normal; line-height:1.35}
+    .sep-row .btn-sep{padding:9px 14px}
+    .sep-chk{width:20px; height:20px}
+    /* Filas de impresión: ocultamos el N° de venta largo para dar aire al título */
+    .selrow{grid-template-columns:auto auto 1fr auto; gap:9px; padding:9px 2px}
+    .selrow .venta{display:none}
+    .selrow input[type=checkbox]{width:18px; height:18px}
+    /* Tarjetas del tablero de Seguimiento: un poco más de presencia */
+    .seg-cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:9px}
   }
 </style>
 </head>
@@ -450,7 +467,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v37</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v38</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -566,7 +583,7 @@
         <div class="totals">
           <div class="total-box"><div class="n" id="v-impresas">—</div><div class="l">Impresas</div></div>
           <div class="total-box"><div class="n" id="v-despachadas">—</div><div class="l">Escaneadas</div></div>
-          <div class="total-box"><div class="n falta" id="v-faltan">—</div><div class="l">Faltan subir</div></div>
+          <div class="total-box"><div class="n falta" id="v-faltan">—</div><div class="l">Faltan despachar</div></div>
         </div>
         <div class="card-box-actions"><button onclick="cargarDespachados()">↻ Actualizar</button></div>
         <div class="status" id="status-verif"></div>
@@ -1381,11 +1398,12 @@
       pintarStats();
       let html='';
       if(d.faltan.length){
-        html+=`<div class="group-h">Impresas hoy que faltan subir al camión</div><div class="list">`;
+        html+=`<details class="faltan-det"><summary class="group-h faltan-sum">⚠️ Faltan despachar · ${d.faltan.length} — ver detalle (reimprimir / revisar)</summary><div class="list">`;
         for(const s of d.faltan) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
           <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span></span>
-          <span class="venta">${esc(s.nro_venta)||""}</span><span class="u"></span></div>`;
-        html+=`</div>`;
+          <span class="venta">${esc(s.nro_venta)||""}</span>
+          <button class="mini" onclick="reimprimirUno('${esc(s.shipment_id)}')">Reimprimir</button></div>`;
+        html+=`</div></details>`;
       }
       document.getElementById('list-faltan').innerHTML=html;
       let html2='';
@@ -1423,8 +1441,8 @@
     const tot = document.getElementById('desp-totales');
     if(tot){
       const c = _porTipo.colecta || {}, f = _porTipo.flex || {};
-      tot.innerHTML = `<div class="tt tt-colecta">Total Colecta · <b>${c.escaneadas||0}</b> escaneadas · ${c.pendientes||0} faltan</div>
-        <div class="tt tt-flex">Total Flex · <b>${f.escaneadas||0}</b> escaneadas · ${f.pendientes||0} faltan</div>`;
+      tot.innerHTML = `<div class="tt tt-colecta">Colecta · <b>${c.escaneadas||0}</b>/${c.total||0} escaneadas · ${c.pendientes||0} faltan</div>
+        <div class="tt tt-flex">Flex · <b>${f.escaneadas||0}</b>/${f.total||0} escaneadas · ${f.pendientes||0} faltan</div>`;
     }
     // Contador grande: por DESTINO activo
     if(!dd){
