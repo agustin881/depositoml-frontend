@@ -428,7 +428,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v35</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v36</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -561,9 +561,16 @@
         <h2>Buscar una venta</h2>
         <p class="buscar-hint">Poné el número de venta (o escaneá la etiqueta) para ver si se despachó y si llegó. Busca solo ese número, no carga todo el historial.</p>
         <div class="buscar-row">
-          <input id="buscar-input" placeholder="Número de venta · ej. 2000016878691168"
+          <input id="buscar-input" placeholder="Número de venta · escaneá con la pistola o tipealo"
                  autocomplete="off" onkeydown="if(event.key==='Enter') buscarVenta()">
           <button onclick="buscarVenta()">Buscar</button>
+        </div>
+        <div class="scan-modos" style="margin-top:8px">
+          <button id="btn-cam-seg" class="scan-modo-btn" onclick="toggleCamaraSeg()">📷 Escanear con cámara</button>
+          <button id="btn-luz-seg" class="scan-modo-btn" onclick="toggleLuzSeg()" style="display:none">💡 Luz</button>
+        </div>
+        <div id="cam-wrap-seg" style="display:none; margin-top:10px">
+          <div id="cam-reader-seg" style="width:100%; max-width:420px; margin:0 auto"></div>
         </div>
         <div class="status" id="status-buscar"></div>
         <div id="buscar-resultado"></div>
@@ -691,12 +698,15 @@
   function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   // ---------- Buscar venta ----------
-  async function buscarVenta(){
-    const venta = (document.getElementById('buscar-input').value || '').trim();
+  async function buscarVenta(valor){
+    const inp = document.getElementById('buscar-input');
+    let venta = (valor!=null ? String(valor) : (inp.value || '')).trim();
+    if(venta && /[\{\s]/.test(venta)) venta = idDeEtiqueta(venta);  // por si pegaron/dispararon un QR crudo
+    if(inp && valor!=null) inp.value = venta;
     const st  = document.getElementById('status-buscar');
     const out = document.getElementById('buscar-resultado');
     out.innerHTML = '';
-    if(!venta){ st.textContent = 'Escribí un número de venta.'; return; }
+    if(!venta){ st.textContent = 'Escribí o escaneá un número de venta.'; return; }
     st.textContent = 'Buscando…';
     try{
       const r = await authFetch(`${API}/api/despacho/buscar?venta=${encodeURIComponent(venta)}`);
@@ -786,10 +796,11 @@
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const v = document.getElementById('view-'+name);
     if(v) v.classList.add('active');
+    _detenerCamaraTodo();
     if(name === 'despachar'){
       cargarDestinos(); cargarDespachados(); cargarColectaHoy();
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
-    } else if(_camScanner){ detenerCamara(); }   // apagar cámara al salir de Despachar
+    }
     if(name === 'imprimir') cargarSeparables();
     if(name === 'seguimiento'){
       const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
@@ -1084,6 +1095,34 @@
 
   let _torchOn = false;
 
+  async function _arrancarCamara(readerId, onDecode, luzId){
+    _camScanner = new Html5Qrcode(readerId);
+    const fmts = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.ITF
+    ] : undefined;
+    const qrbox = (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; };
+    await _camScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox, formatsToSupport: fmts, useBarCodeDetectorIfSupported: true,
+        videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } },
+      onDecode, () => {}
+    );
+    const v = document.querySelector('#'+readerId+' video');
+    if(v){ v.setAttribute('playsinline','true'); v.setAttribute('webkit-playsinline','true'); v.muted = true; }
+    _torchOn = false;
+    if(luzId){
+      const luz = document.getElementById(luzId);
+      try{ const caps = _camScanner.getRunningTrackCapabilities(); luz.style.display = (caps && caps.torch) ? 'inline-block' : 'none'; luz.textContent = '💡 Luz'; }
+      catch(e){ luz.style.display = 'none'; }
+    }
+  }
+
   async function toggleCamara(){
     const wrap = document.getElementById('cam-wrap');
     const btn = document.getElementById('btn-cam');
@@ -1096,51 +1135,8 @@
     wrap.style.display = 'block';
     btn.textContent = '✕ Cerrar cámara'; btn.classList.add('activo');
     actualizarHintTest();
-    _camScanner = new Html5Qrcode('cam-reader');
     try{
-      // Formatos a detectar: QR + códigos de barras comunes en etiquetas ML
-      const fmts = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
-        Html5QrcodeSupportedFormats.QR_CODE,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.ITF
-      ] : undefined;
-      // Recuadro de lectura grande y cuadrado (≈75% del lado menor del visor)
-      const qrbox = (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; };
-      await _camScanner.start(
-        { facingMode: 'environment' },     // ignorado si hay videoConstraints, lo dejo por compatibilidad
-        {
-          fps: 10,
-          qrbox,
-          formatsToSupport: fmts,
-          // Usa el detector de códigos NATIVO del navegador si existe (Android Chrome):
-          // mucho más rápido y confiable con el QR de Mercado Libre.
-          useBarCodeDetectorIfSupported: true,
-          // Cámara trasera en alta resolución y con enfoque continuo (clave para leer el QR):
-          videoConstraints: {
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            advanced: [{ focusMode: 'continuous' }]
-          }
-        },
-        onLeerQR,
-        () => {}                           // ignora frames sin código
-      );
-      // iPhone/Safari: que el video se vea embebido y no en pantalla completa
-      const v = document.querySelector('#cam-reader video');
-      if(v){ v.setAttribute('playsinline','true'); v.setAttribute('webkit-playsinline','true'); v.muted = true; }
-      // Botón de linterna solo si el dispositivo lo soporta
-      _torchOn = false;
-      const luz = document.getElementById('btn-luz');
-      try{
-        const caps = _camScanner.getRunningTrackCapabilities();
-        luz.style.display = (caps && caps.torch) ? 'inline-block' : 'none';
-        luz.textContent = '💡 Luz';
-      }catch(e){ luz.style.display = 'none'; }
+      await _arrancarCamara('cam-reader', onLeerQR, 'btn-luz');
     }catch(e){
       document.getElementById('cam-hint').textContent =
         'No se pudo abrir la cámara. Revisá que diste permiso (y que estás en https).';
@@ -1158,13 +1154,77 @@
     }catch(e){ document.getElementById('btn-luz').style.display = 'none'; }
   }
 
-  async function detenerCamara(){
-    const btn = document.getElementById('btn-cam');
+  async function _pararScanner(){
     try{ if(_camScanner){ await _camScanner.stop(); await _camScanner.clear(); } }catch(e){}
     _camScanner = null; _torchOn = false;
+  }
+  function _detenerCamaraTodo(){
+    if(!_camScanner) return;
+    _pararScanner();
+    [['btn-cam','cam-wrap','btn-luz'],['btn-cam-seg','cam-wrap-seg','btn-luz-seg']].forEach(([b,w,l])=>{
+      const bb=document.getElementById(b); if(bb){ bb.textContent='📷 Escanear con cámara'; bb.classList.remove('activo'); }
+      const ww=document.getElementById(w); if(ww) ww.style.display='none';
+      const ll=document.getElementById(l); if(ll) ll.style.display='none';
+    });
+  }
+
+  async function detenerCamara(){
+    const btn = document.getElementById('btn-cam');
+    await _pararScanner();
     const luz = document.getElementById('btn-luz'); if(luz) luz.style.display = 'none';
     document.getElementById('cam-wrap').style.display = 'none';
-    btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo');
+    if(btn){ btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo'); }
+  }
+
+  // ---------- Escaneo en Seguimiento (buscar venta) ----------
+  function idDeEtiqueta(texto){
+    const t = String(texto||'').trim();
+    try{ const j = JSON.parse(t); if(j && j.id) return String(j.id); }catch(e){}
+    const nums = t.match(/\d{8,}/g) || [];
+    return nums[0] || t;
+  }
+  async function toggleCamaraSeg(){
+    const wrap = document.getElementById('cam-wrap-seg');
+    const btn = document.getElementById('btn-cam-seg');
+    if(_camScanner){ await detenerCamaraSeg(); return; }
+    if(typeof Html5Qrcode === 'undefined'){
+      document.getElementById('status-buscar').innerHTML = 'No se pudo cargar el lector de cámara. Probá recargar la página.';
+      return;
+    }
+    wrap.style.display = 'block';
+    btn.textContent = '✕ Cerrar cámara'; btn.classList.add('activo');
+    try{
+      await _arrancarCamara('cam-reader-seg', onLeerQRSeg, 'btn-luz-seg');
+    }catch(e){
+      document.getElementById('status-buscar').textContent =
+        'No se pudo abrir la cámara. Revisá que diste permiso (y que estás en https).';
+      btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo');
+      _camScanner = null;
+    }
+  }
+  async function detenerCamaraSeg(){
+    const btn = document.getElementById('btn-cam-seg');
+    await _pararScanner();
+    const luz = document.getElementById('btn-luz-seg'); if(luz) luz.style.display = 'none';
+    const wrap = document.getElementById('cam-wrap-seg'); if(wrap) wrap.style.display = 'none';
+    if(btn){ btn.textContent = '📷 Escanear con cámara'; btn.classList.remove('activo'); }
+  }
+  async function toggleLuzSeg(){
+    if(!_camScanner) return;
+    try{ _torchOn = !_torchOn; await _camScanner.applyVideoConstraints({ advanced: [{ torch: _torchOn }] });
+      document.getElementById('btn-luz-seg').textContent = _torchOn ? '💡 Luz: ON' : '💡 Luz';
+    }catch(e){ document.getElementById('btn-luz-seg').style.display = 'none'; }
+  }
+  let _ultimoSeg = '', _ultimoSegAt = 0;
+  async function onLeerQRSeg(texto){
+    const ahora = Date.now();
+    if(texto === _ultimoSeg && ahora - _ultimoSegAt < 3000) return;
+    _ultimoSeg = texto; _ultimoSegAt = ahora;
+    beep(false);
+    const id = idDeEtiqueta(texto);
+    const inp = document.getElementById('buscar-input'); if(inp) inp.value = id;
+    await detenerCamaraSeg();   // cerramos la cámara y mostramos el resultado
+    buscarVenta(id);
   }
 
   function onLeerQR(texto){
