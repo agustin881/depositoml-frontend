@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <style>
   :root{
     --bg:#F2F3F5; --surface:#FFFFFF;
@@ -458,6 +459,44 @@
     .selrow input[type=checkbox]{width:18px; height:18px}
     /* Tarjetas del tablero de Seguimiento: un poco más de presencia */
     .seg-cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:9px}
+  }  /* ===== ENVÍOS FULL · convertidor ZPL→PDF ===== */
+  #view-full .ef-wrap{max-width:1200px; margin:0 auto; padding:18px 0}
+  #view-full .ef-grid{display:grid; grid-template-columns:380px 1fr; gap:16px; align-items:start}
+  #view-full .ef-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px}
+  #view-full .ef-title{font-weight:800; font-size:18px; color:var(--ink); letter-spacing:-.01em; margin-bottom:6px}
+  #view-full .ef-sub{color:var(--muted2); font-size:13px; line-height:1.5; margin:0 0 14px}
+  #view-full .ef-drop{border:2px dashed var(--line2); border-radius:var(--radius-sm); padding:26px 14px; text-align:center; cursor:pointer; transition:.15s; background:#FAFBFC}
+  #view-full .ef-drop:hover{border-color:var(--flex); background:#F2F7FF}
+  #view-full .ef-drop.dragover{border-color:var(--flex); background:#EAF2FF}
+  #view-full .ef-drop.loaded{border-style:solid; border-color:var(--ok); background:#F0FBF4}
+  #view-full .ef-drop strong{display:block; color:var(--ink); font-size:14px}
+  #view-full .ef-drop span{display:block; color:var(--muted2); font-size:12px; margin-top:3px}
+  #view-full .ef-drop .ef-check{font-size:26px; color:var(--ok); line-height:1; margin-bottom:4px}
+  #view-full .ef-drop .ef-fname{font-weight:700; color:var(--ink); font-size:13px; margin-top:4px; word-break:break-all}
+  #view-full .ef-drop .ef-fmeta{color:var(--muted2); font-size:12px}
+  #view-full .ef-row2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px}
+  #view-full .ef-lbl{display:block; font-size:12px; font-weight:600; color:var(--muted2); margin-bottom:5px}
+  #view-full .ef-input{width:100%; padding:9px 10px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-size:14px; font-family:inherit; color:var(--ink); background:var(--surface)}
+  #view-full .ef-stat{margin-top:16px; padding:12px; background:var(--bg); border-radius:var(--radius-sm); text-align:center; font-size:13px; color:var(--muted2)}
+  #view-full .ef-stat b{font-size:22px; color:var(--ink); display:block; font-family:'JetBrains Mono',monospace}
+  #view-full .ef-btns{display:flex; flex-direction:column; gap:8px; margin-top:14px}
+  #view-full .ef-btn{width:100%; padding:12px; border:none; border-radius:10px; font-weight:700; font-size:14px; font-family:inherit}
+  #view-full .ef-primary{background:var(--flex); color:#fff} #view-full .ef-primary:hover{background:var(--flex-d)}
+  #view-full .ef-secondary{background:var(--colecta); color:#fff} #view-full .ef-secondary:hover{background:var(--colecta-d)}
+  #view-full .ef-ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line2)} #view-full .ef-ghost:hover{background:#F5F5F5}
+  #view-full .ef-danger{background:var(--surface); color:var(--err); border:1px solid var(--line2)} #view-full .ef-danger:hover{background:#FFF1F2}
+  #view-full .ef-status{margin-top:14px; padding:11px 12px; border-radius:var(--radius-sm); font-size:13px; background:var(--bg); color:var(--muted2)}
+  #view-full .ef-status.ok{background:#F0FBF4; color:var(--ok)}
+  #view-full .ef-status.err{background:#FFF1F2; color:var(--err)}
+  #view-full .ef-textarea{width:100%; min-height:90px; margin-top:5px; padding:10px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-family:'JetBrains Mono',monospace; font-size:12px; resize:vertical; color:var(--ink2)}
+  #view-full .ef-preview-head{display:flex; flex-direction:column; gap:3px; margin-bottom:12px}
+  #view-full .ef-preview{border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; min-height:520px; background:var(--bg)}
+  #view-full .ef-preview iframe{width:100%; height:620px; border:none; display:block}
+  #view-full .ef-empty{height:520px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:13px; text-align:center; padding:20px}
+  @media(max-width:860px){
+    #view-full .ef-grid{grid-template-columns:1fr}
+    #view-full .ef-preview iframe{height:480px}
+    #view-full .ef-preview, #view-full .ef-empty{min-height:380px}
   }
 </style>
 </head>
@@ -483,7 +522,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v39</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v40</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -492,6 +531,7 @@
       <button class="tab active" data-tab="imprimir" onclick="verTab('imprimir')">Imprimir <span class="badge badge-imprimir" style="display:none">0</span></button>
       <button class="tab" data-tab="despachar" onclick="verTab('despachar')">Despachar <span class="badge badge-despachar" style="display:none">0</span></button>
       <button class="tab" data-tab="seguimiento" onclick="verTab('seguimiento')">Seguimiento</button>
+      <button class="tab" data-tab="full" onclick="verTab('full')">Envíos Full</button>
       <button class="tab tab-config" data-tab="config" onclick="verTab('config')">⚙</button>
     </nav>
   </header>
@@ -662,6 +702,68 @@
     </section>
 
     <!-- ===== CONFIGURACIÓN ===== -->
+    <section id="view-full" class="view">
+      <div class="ef-wrap">
+        <div class="ef-grid">
+          <div class="ef-card">
+            <div class="ef-title">Etiquetas ML Full · ZPL → PDF</div>
+            <p class="ef-sub">Cargá el archivo de etiquetas que te da ML Full (.txt / .zpl / .prn) o pegá el ZPL. Las uno en un solo PDF listo para imprimir.</p>
+            <div class="ef-drop" id="ef-dropzone">
+              <div><strong>Arrastrá tu TXT/ZPL acá</strong><span>o tocá para elegir el archivo</span></div>
+            </div>
+            <input id="ef-fileInput" type="file" accept=".txt,.zpl,.prn,.dat,text/plain" style="display:none">
+            <div class="ef-row2">
+              <div>
+                <label class="ef-lbl">Tamaño etiqueta</label>
+                <select id="ef-format" class="ef-input">
+                  <option value="4x6" selected>4 x 6 pulgadas (estándar ML)</option>
+                  <option value="4x4">4 x 4 pulgadas</option>
+                  <option value="3x2">3 x 2 pulgadas</option>
+                </select>
+              </div>
+              <div>
+                <label class="ef-lbl">Densidad</label>
+                <select id="ef-density" class="ef-input">
+                  <option value="8dpmm" selected>8 dpmm (203 dpi)</option>
+                  <option value="12dpmm">12 dpmm (300 dpi)</option>
+                  <option value="6dpmm">6 dpmm (152 dpi)</option>
+                </select>
+              </div>
+            </div>
+            <div class="ef-row2">
+              <div>
+                <label class="ef-lbl">Etiquetas por tanda</label>
+                <input id="ef-batchSize" class="ef-input" type="number" min="1" max="50" value="50">
+              </div>
+              <div>
+                <label class="ef-lbl">Espera entre tandas (ms)</label>
+                <input id="ef-delayMs" class="ef-input" type="number" min="1000" step="500" value="3500">
+              </div>
+            </div>
+            <div class="ef-stat"><b id="ef-count">0</b> etiquetas detectadas</div>
+            <div class="ef-btns">
+              <button class="ef-btn ef-primary" id="ef-convertBtn">Convertir TODAS a un PDF</button>
+              <button class="ef-btn ef-secondary" id="ef-printBtn">Imprimir todo</button>
+              <button class="ef-btn ef-ghost" id="ef-downloadTxtBtn">Descargar ZPL limpio</button>
+              <button class="ef-btn ef-danger" id="ef-clearBtn">Limpiar</button>
+            </div>
+            <div id="ef-status" class="ef-status">Esperando archivo.</div>
+            <label class="ef-lbl" style="margin-top:16px">O pegá el ZPL acá</label>
+            <textarea id="ef-zplText" class="ef-textarea" placeholder="^XA ... ^XZ"></textarea>
+          </div>
+          <div class="ef-card">
+            <div class="ef-preview-head">
+              <div class="ef-title" style="margin:0">Vista previa</div>
+              <span class="ef-sub" id="ef-previewInfo" style="margin:0">Todavía no hay PDF generado.</span>
+            </div>
+            <div class="ef-preview" id="ef-preview">
+              <div class="ef-empty">Cuando conviertas, el PDF aparece acá.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="view-config" class="view">
       <div class="card-box">
         <div class="seg-head">
@@ -714,6 +816,10 @@
     <button class="navbtn" data-tab="seguimiento" onclick="verTab('seguimiento')">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Seguimiento
+    </button>
+    <button class="navbtn" data-tab="full" onclick="verTab('full')">
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Full
     </button>
   </nav>
 </div>
@@ -2171,6 +2277,130 @@
     const t = await token();
     if(t) mostrarApp(); else mostrarLogin();
   })();
+</script>
+<script>
+/* ===== ENVÍOS FULL · convertidor ZPL→PDF (aislado) ===== */
+(function(){
+  const $ = id => document.getElementById(id);
+  const fileInput = $('ef-fileInput'), dropzone = $('ef-dropzone'), zplText = $('ef-zplText');
+  const countEl = $('ef-count'), statusEl = $('ef-status'), preview = $('ef-preview'), previewInfo = $('ef-previewInfo');
+  if(!dropzone) return;
+
+  let lastPdfUrl = null, currentFileName = '';
+  const setStatus = (msg, type='') => { statusEl.className = 'ef-status' + (type ? ' '+type : ''); statusEl.textContent = msg; };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const splitLabels = text => { const m = (text||'').match(/\^XA[\s\S]*?\^XZ/g); return m ? m : []; };
+
+  const renderDrop = (n=0) => {
+    if(!currentFileName){
+      dropzone.classList.remove('loaded');
+      dropzone.innerHTML = '<div><strong>Arrastrá tu TXT/ZPL acá</strong><span>o tocá para elegir el archivo</span></div>';
+      return;
+    }
+    dropzone.classList.add('loaded');
+    dropzone.innerHTML = '<div><div class="ef-check">\u2713</div><strong>Archivo cargado</strong><div class="ef-fname">'+currentFileName+'</div><div class="ef-fmeta">'+n+' etiquetas detectadas</div></div>';
+  };
+
+  const updateStats = () => {
+    const labels = splitLabels(zplText.value);
+    countEl.textContent = labels.length;
+    if(currentFileName) renderDrop(labels.length);
+  };
+
+  const readFile = file => {
+    currentFileName = file.name; renderDrop(0); setStatus('Leyendo archivo...');
+    const reader = new FileReader();
+    reader.onload = () => {
+      zplText.value = reader.result;
+      updateStats();
+      const n = splitLabels(zplText.value).length;
+      renderDrop(n);
+      setStatus('Archivo cargado. Se detectaron '+n+' etiqueta(s).', n ? 'ok' : 'err');
+    };
+    reader.readAsText(file);
+  };
+
+  const postLabelary = async (url, chunk, num, total) => {
+    for(let a=1; a<=4; a++){
+      const res = await fetch(url, { method:'POST', headers:{'Accept':'application/pdf','Content-Type':'application/x-www-form-urlencoded'}, body:chunk });
+      if(res.ok) return await res.arrayBuffer();
+      if(res.status === 429 && a < 4){
+        const w = a*10000;
+        setStatus('Labelary limitó la velocidad en la tanda '+num+'/'+total+'. Reintento en '+Math.round(w/1000)+' s...');
+        await sleep(w); continue;
+      }
+      throw new Error('Labelary devolvió error '+res.status+' en la tanda '+num);
+    }
+  };
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => e.target.files[0] && readFile(e.target.files[0]));
+  zplText.addEventListener('input', updateStats);
+  $('ef-batchSize').addEventListener('input', updateStats);
+  ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+  dropzone.addEventListener('drop', e => e.dataTransfer.files[0] && readFile(e.dataTransfer.files[0]));
+
+  $('ef-convertBtn').addEventListener('click', async () => {
+    const labels = splitLabels(zplText.value.trim());
+    if(!labels.length) return setStatus('No encontré etiquetas válidas (deberían tener bloques ^XA ... ^XZ).', 'err');
+    const density = $('ef-density').value, format = $('ef-format').value;
+    const batchSize = Math.min(50, Math.max(1, Number($('ef-batchSize').value) || 50));
+    const delayMs = Math.max(1000, Number($('ef-delayMs').value) || 3500);
+    const totalBatches = Math.ceil(labels.length / batchSize);
+    const url = 'https://api.labelary.com/v1/printers/'+density+'/labels/'+format+'/';
+    setStatus('Generando un PDF con '+labels.length+' etiquetas. Tanda 1 de '+totalBatches+'...');
+    try{
+      if(!window.PDFLib) throw new Error('No cargó la librería para unir PDFs. Revisá internet y recargá la página.');
+      const merged = await PDFLib.PDFDocument.create();
+      for(let i=0; i<labels.length; i+=batchSize){
+        const num = Math.floor(i/batchSize)+1;
+        const chunk = labels.slice(i, i+batchSize).join('\n');
+        setStatus('Convirtiendo tanda '+num+' de '+totalBatches+'...');
+        const bytes = await postLabelary(url, chunk, num, totalBatches);
+        const pdf = await PDFLib.PDFDocument.load(bytes);
+        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(p => merged.addPage(p));
+        if(num < totalBatches){
+          setStatus('Tanda '+num+' de '+totalBatches+' lista. Espero '+Math.round(delayMs/1000)+' s para no saturar Labelary...');
+          await sleep(delayMs);
+        }
+      }
+      const out = await merged.save();
+      const blob = new Blob([out], { type:'application/pdf' });
+      if(lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
+      lastPdfUrl = URL.createObjectURL(blob);
+      preview.innerHTML = '<iframe src="'+lastPdfUrl+'"></iframe>';
+      previewInfo.textContent = 'PDF completo: '+labels.length+' etiquetas en un solo archivo.';
+      setStatus('Listo: 1 PDF con '+labels.length+' etiquetas para imprimir de una.', 'ok');
+    }catch(err){
+      setStatus('No pude convertir. Detalle: '+err.message, 'err');
+    }
+  });
+
+  $('ef-printBtn').addEventListener('click', () => {
+    if(!lastPdfUrl) return setStatus('Primero generá el PDF.', 'err');
+    const w = window.open(lastPdfUrl, '_blank');
+    setTimeout(() => w && w.print(), 900);
+  });
+
+  $('ef-downloadTxtBtn').addEventListener('click', () => {
+    const text = splitLabels(zplText.value).join('\n');
+    if(!text) return setStatus('No hay ZPL limpio para descargar.', 'err');
+    const blob = new Blob([text], { type:'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'etiquetas_limpias.zpl'; a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('ef-clearBtn').addEventListener('click', () => {
+    zplText.value=''; fileInput.value=''; currentFileName='';
+    updateStats(); renderDrop(0);
+    preview.innerHTML = '<div class="ef-empty">Cuando conviertas, el PDF aparece acá.</div>';
+    previewInfo.textContent = 'Todavía no hay PDF generado.';
+    setStatus('Esperando archivo.');
+  });
+})();
 </script>
 </body>
 </html>
