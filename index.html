@@ -194,6 +194,22 @@
   .fs-input{width:min(680px,90%); padding:18px 22px; font-size:clamp(18px,2.4vw,26px); border-radius:12px; border:2px solid rgba(255,255,255,.25); background:rgba(255,255,255,.06); color:#fff; text-align:center}
   .fs-input::placeholder{color:rgba(255,255,255,.45)}
   .fs-flash{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; opacity:0; pointer-events:none; transition:opacity .08s}
+  /* Cámara a pantalla completa (Despachar, celu) */
+  .fs-cam{width:100%; max-width:560px; aspect-ratio:3/4; max-height:56vh; background:#000; border-radius:16px; overflow:hidden; position:relative}
+  .fs-cam video{width:100%!important; height:100%!important; object-fit:cover!important}
+  .fs-cam::after{content:""; position:absolute; left:8%; right:8%; top:30%; bottom:30%; border:3px solid rgba(255,255,255,.85); border-radius:14px; box-shadow:0 0 0 100vmax rgba(0,0,0,.18); pointer-events:none}
+  .fs-cam-ctrls{display:flex; align-items:center; gap:12px; width:100%; max-width:560px; justify-content:center; flex-wrap:wrap}
+  .fs-zbtn{background:rgba(255,255,255,.16); color:#fff; border:none; border-radius:12px; padding:12px 18px; font-size:18px; font-weight:800; cursor:pointer; min-width:54px}
+  .fs-zbtn:active{background:rgba(255,255,255,.3)}
+  .fs-zoom{flex:1; min-width:120px; max-width:240px; accent-color:#34D399; height:30px}
+  .fs-cam-btn{background:#34D399; color:#06281c; border:none; border-radius:14px; padding:16px 22px; font-size:18px; font-weight:800; cursor:pointer; width:min(560px,92%)}
+  .fs-cam-btn.on{background:rgba(255,255,255,.16); color:#fff}
+  /* En modo cámara achicamos los números para que entre todo */
+  .fs.fs-cammode .fs-n{font-size:clamp(64px,16vw,120px)}
+  .fs.fs-cammode .fs-n2{font-size:clamp(40px,10vw,80px)}
+  .fs.fs-cammode .fs-nums{gap:clamp(28px,10vw,60px); margin-top:6px}
+  .fs.fs-cammode .fs-input{display:none}
+  .fs.fs-cammode .fs-body{justify-content:flex-start; gap:12px; padding-top:14px}
   .fs-flash.show{opacity:1}
   .fs-flash.fs-ok{background:rgba(16,185,129,.92)}
   .fs-flash.fs-err{background:rgba(220,38,38,.94)}
@@ -467,7 +483,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v38</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v39</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -712,12 +728,20 @@
     </div>
   </div>
   <div class="fs-body">
+    <div id="fs-cam" class="fs-cam" style="display:none"></div>
+    <div id="fs-cam-ctrls" class="fs-cam-ctrls" style="display:none">
+      <button class="fs-zbtn fs-zoomb" onclick="fsZoomStep(-1)">➖</button>
+      <input id="fs-zoom" class="fs-zoom" type="range" min="1" max="5" step="0.1" value="1" oninput="fsZoomSet(this.value)">
+      <button class="fs-zbtn fs-zoomb" onclick="fsZoomStep(1)">➕</button>
+      <button id="fs-torch" class="fs-zbtn" onclick="fsTorch()">💡 Luz</button>
+    </div>
     <div class="fs-nums">
       <div class="fs-esc"><div class="fs-n" id="fs-count">0</div><div class="fs-l" id="fs-count-l">escaneados</div></div>
       <div class="fs-pend"><div class="fs-n2" id="fs-pend">0</div><div class="fs-l">faltan</div></div>
     </div>
     <input id="fs-input" class="fs-input" placeholder="Dispará con la pistola acá…" autocomplete="off"
            onkeydown="if(event.key==='Enter'){ escanear(this.value); this.value=''; }">
+    <button id="fs-cam-btn" class="fs-cam-btn" onclick="fsCamToggle()">📷 Encender cámara</button>
   </div>
   <div id="fs-flash" class="fs-flash"></div>
 </div>
@@ -1110,7 +1134,13 @@
     setTimeout(()=>{ const fi=document.getElementById('fs-input'); if(fi) fi.focus(); }, 60);
   }
   function cerrarFS(){
-    const fs=document.getElementById('fs'); if(fs) fs.style.display='none';
+    if(_camScanner){ _pararScanner(); }
+    const cam=document.getElementById('fs-cam'); if(cam) cam.style.display='none';
+    const ctrls=document.getElementById('fs-cam-ctrls'); if(ctrls) ctrls.style.display='none';
+    const fs=document.getElementById('fs');
+    if(fs){ fs.classList.remove('fs-cammode'); fs.style.display='none'; }
+    const cb=document.getElementById('fs-cam-btn'); if(cb){ cb.textContent='📷 Encender cámara'; cb.classList.remove('on'); }
+    _fsCamOn=false;
     const si=document.getElementById('scan-input'); if(si) si.focus();
   }
   function fsToggleBajar(){
@@ -1134,6 +1164,61 @@
 
   let _torchOn = false;
 
+  // ---------- Cámara a PANTALLA COMPLETA (Despachar, celu) ----------
+  let _fsCamOn = false, _fsZoomCaps = null;
+  async function fsCamToggle(){
+    const cam=document.getElementById('fs-cam'), ctrls=document.getElementById('fs-cam-ctrls');
+    const btn=document.getElementById('fs-cam-btn'), fs=document.getElementById('fs');
+    if(_camScanner){   // apagar
+      await _pararScanner(); _fsCamOn=false;
+      cam.style.display='none'; ctrls.style.display='none'; fs.classList.remove('fs-cammode');
+      btn.textContent='📷 Encender cámara'; btn.classList.remove('on');
+      const fi=document.getElementById('fs-input'); if(fi) fi.focus();
+      return;
+    }
+    if(typeof Html5Qrcode==='undefined'){ mostrarFS('warn','Sin cámara','Recargá la página'); return; }
+    cam.style.display='block'; fs.classList.add('fs-cammode');
+    btn.textContent='✕ Apagar cámara'; btn.classList.add('on');
+    try{
+      await _arrancarCamara('fs-cam', onLeerQR, null);
+      _fsCamOn=true;
+      setTimeout(fsSetupZoomTorch, 500);
+    }catch(e){
+      cam.style.display='none'; fs.classList.remove('fs-cammode');
+      btn.textContent='📷 Encender cámara'; btn.classList.remove('on');
+      mostrarFS('err','No se pudo abrir','Revisá permisos de cámara');
+      _camScanner=null;
+    }
+  }
+  function fsSetupZoomTorch(){
+    const ctrls=document.getElementById('fs-cam-ctrls');
+    let caps=null; try{ caps=_camScanner.getRunningTrackCapabilities(); }catch(e){}
+    _fsZoomCaps = (caps && caps.zoom) ? caps.zoom : null;
+    ctrls.style.display='flex';
+    const z=document.getElementById('fs-zoom');
+    const zoomBtns=document.querySelectorAll('.fs-zoomb');
+    if(_fsZoomCaps){
+      z.min=_fsZoomCaps.min||1; z.max=_fsZoomCaps.max||5; z.step=_fsZoomCaps.step||0.1; z.value=_fsZoomCaps.min||1;
+      z.style.display=''; zoomBtns.forEach(b=>b.style.display='');
+    } else { z.style.display='none'; zoomBtns.forEach(b=>b.style.display='none'); }
+    const t=document.getElementById('fs-torch');
+    t.style.display = (caps && caps.torch) ? '' : 'none'; t.textContent='💡 Luz'; _torchOn=false;
+    if(!_fsZoomCaps && !(caps && caps.torch)) ctrls.style.display='none';  // nada que mostrar
+  }
+  async function fsZoomSet(v){ try{ await _camScanner.applyVideoConstraints({ advanced:[{ zoom:parseFloat(v) }] }); }catch(e){} }
+  function fsZoomStep(d){
+    const z=document.getElementById('fs-zoom'); if(!_fsZoomCaps) return;
+    const step=(parseFloat(z.step)||0.1), salto=Math.max(step, (parseFloat(z.max)-parseFloat(z.min))/8);
+    let nv=parseFloat(z.value)+d*salto;
+    nv=Math.min(parseFloat(z.max), Math.max(parseFloat(z.min), nv));
+    z.value=nv; fsZoomSet(nv);
+  }
+  async function fsTorch(){
+    try{ _torchOn=!_torchOn; await _camScanner.applyVideoConstraints({ advanced:[{ torch:_torchOn }] });
+      document.getElementById('fs-torch').textContent=_torchOn?'💡 Luz ON':'💡 Luz';
+    }catch(e){ document.getElementById('fs-torch').style.display='none'; }
+  }
+
   async function _arrancarCamara(readerId, onDecode, luzId){
     _camScanner = new Html5Qrcode(readerId);
     const fmts = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
@@ -1145,10 +1230,10 @@
       Html5QrcodeSupportedFormats.UPC_A,
       Html5QrcodeSupportedFormats.ITF
     ] : undefined;
-    const qrbox = (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; };
+    const qrbox = (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.82); return { width: m, height: Math.floor(m*0.62) }; };
     await _camScanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox, formatsToSupport: fmts, useBarCodeDetectorIfSupported: true,
+      { fps: 15, qrbox, formatsToSupport: fmts, useBarCodeDetectorIfSupported: true, disableFlip: false,
         videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } },
       onDecode, () => {}
     );
@@ -1169,6 +1254,13 @@
     if(typeof Html5Qrcode === 'undefined'){
       document.getElementById('scan-result').innerHTML =
         `<div class="status err">No se pudo cargar el lector de cámara. Probá recargar la página.</div>`;
+      return;
+    }
+    // En el celu: abrir la cámara a PANTALLA COMPLETA (con contador grande y zoom)
+    if(window.innerWidth <= 640){
+      if(!_destinoActivo){ alert('Primero elegí o abrí un destino (Colecta o Flex).'); return; }
+      abrirFS();
+      setTimeout(()=>fsCamToggle(), 250);
       return;
     }
     wrap.style.display = 'block';
