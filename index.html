@@ -498,6 +498,26 @@
     #view-full .ef-preview iframe{height:480px}
     #view-full .ef-preview, #view-full .ef-empty{min-height:380px}
   }
+  /* ===== COLECTA FULL ===== */
+  #view-full .ef-envio{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:14px; border:1px solid var(--line2); border-radius:var(--radius-sm); margin-bottom:10px}
+  #view-full .ef-envio.completo{border-color:#9BE3BC; background:#F0FBF4}
+  #view-full .ef-envio-id{font-weight:800; font-size:16px; color:var(--ink); font-family:'JetBrains Mono',monospace}
+  #view-full .ef-envio-meta{font-size:13px; color:var(--muted2); flex:1; min-width:130px}
+  #view-full .ef-envio-prog{font-weight:700; font-size:13px}
+  #view-full .ef-scan-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px}
+  #view-full .ef-scan-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
+  #view-full .ef-sbox{background:var(--bg); border-radius:var(--radius-sm); padding:12px; text-align:center}
+  #view-full .ef-sbox.ef-falta .ef-sn{color:var(--colecta)}
+  #view-full .ef-sn{font-size:26px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--ink); line-height:1}
+  #view-full .ef-sl{font-size:11px; color:var(--muted2); margin-top:3px}
+  #view-full .ef-scan-row{display:flex; gap:8px; align-items:stretch}
+  #view-full .ef-scan-row input{flex:1; padding:11px 12px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-size:15px; font-family:inherit; color:var(--ink)}
+  #view-full .ef-scan-list{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px}
+  #view-full .ef-chip{display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; border:1px solid var(--line2); font-size:12px; font-weight:700; color:var(--muted2); background:var(--surface)}
+  #view-full .ef-chip.ok{background:#E9F9F0; border-color:#9BE3BC; color:var(--ok)}
+  #view-full .ef-chip .ef-chip-t{font-size:10px; font-weight:800; padding:1px 5px; border-radius:6px; background:var(--line); color:var(--muted2)}
+  #view-full .ef-chip.ppi .ef-chip-t{background:#FCE9D4; color:var(--colecta-d)}
+  #view-full .ef-chip.box .ef-chip-t{background:#E3EDFB; color:var(--flex-d)}
 </style>
 </head>
 <body>
@@ -522,7 +542,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v40</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v41</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -759,6 +779,36 @@
             </div>
           </div>
         </div>
+
+        <div class="ef-card" style="margin-top:16px">
+          <div class="ef-title">Colecta Full · verificar envíos</div>
+          <p class="ef-sub">Al subir el archivo registro los bultos y pallets del envío (descarto las etiquetas de producto). Después abrí la colecta y escaneá cada uno para confirmar que despachaste todo.</p>
+          <div id="ef-envios"><div class="ef-empty" style="height:auto; padding:20px">Todavía no hay envíos cargados. Subí un archivo de etiquetas Full.</div></div>
+        </div>
+
+        <div id="ef-colecta-scan" class="ef-card" style="display:none; margin-top:16px">
+          <div class="ef-scan-head">
+            <div>
+              <div class="ef-title" id="ef-scan-title" style="margin:0">Colecta Full</div>
+              <div class="ef-sub" id="ef-scan-sub" style="margin:0">—</div>
+            </div>
+            <button class="ef-btn ef-ghost" style="width:auto; padding:8px 14px" onclick="efCerrarColecta()">Cerrar</button>
+          </div>
+          <div class="ef-scan-stats">
+            <div class="ef-sbox"><div class="ef-sn" id="ef-sc-esc">0</div><div class="ef-sl">escaneados</div></div>
+            <div class="ef-sbox ef-falta"><div class="ef-sn" id="ef-sc-fal">0</div><div class="ef-sl">faltan</div></div>
+            <div class="ef-sbox"><div class="ef-sn" id="ef-sc-tot">0</div><div class="ef-sl">total</div></div>
+          </div>
+          <div class="ef-scan-row">
+            <input id="ef-scan-input" placeholder="Escaneá con la pistola o tipeá el código" autocomplete="off"
+                   onkeydown="if(event.key==='Enter') efScanInput()">
+            <button class="ef-btn ef-secondary" style="width:auto; padding:10px 16px" id="ef-scan-cam" onclick="efToggleCam()">📷 Cámara</button>
+          </div>
+          <div id="ef-scan-reader" style="display:none; max-width:420px; margin:10px auto"></div>
+          <div id="ef-scan-msg" class="ef-status" style="display:none; margin-top:10px"></div>
+          <div id="ef-scan-list" class="ef-scan-list"></div>
+        </div>
+
       </div>
     </section>
 
@@ -974,6 +1024,8 @@
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
     }
     if(name === 'config') cargarConfigCamiones();
+    if(name === 'full' && typeof efRefreshEnvios === 'function') efRefreshEnvios();
+    if(name !== 'full' && typeof efStopCam === 'function') efStopCam();
     window.scrollTo(0, 0);
   }
   // Contadores numéricos en las pestañas (estilo ML)
@@ -2371,6 +2423,12 @@
       preview.innerHTML = '<iframe src="'+lastPdfUrl+'"></iframe>';
       previewInfo.textContent = 'PDF completo: '+labels.length+' etiquetas en un solo archivo.';
       setStatus('Listo: 1 PDF con '+labels.length+' etiquetas para imprimir de una.', 'ok');
+      // Registrar bultos/pallets Full (si el archivo los tiene) y refrescar la lista de colectas
+      const reg = await efRegistrarDesdeZpl();
+      if(reg && reg.total){
+        setStatus(`PDF listo (${labels.length} etiquetas). Envío ${reg.envio} registrado: ${reg.bultos} bultos + ${reg.pallets} pallets. Abrí la Colecta Full más abajo para verificar.`, 'ok');
+        efRefreshEnvios();
+      }
     }catch(err){
       setStatus('No pude convertir. Detalle: '+err.message, 'err');
     }
@@ -2398,6 +2456,180 @@
     previewInfo.textContent = 'Todavía no hay PDF generado.';
     setStatus('Esperando archivo.');
   });
+
+  // ===== COLECTA FULL: registrar + verificar =====
+  const api = (p) => `${API}${p}`;
+  let efEnvio = null, efItems = [], efScanner = null, efCamOn = false, efLastScan = '', efLastTs = 0;
+
+  function parseInbItems(zpl){
+    const blocks = (zpl||'').match(/\^XA[\s\S]*?\^XZ/g) || [];
+    const map = new Map();
+    for(const b of blocks){
+      if(!/"t":"inb"/.test(b) && !/COLECTA FULL/i.test(b)) continue;
+      let id=null, ref=null, tipo=null, m;
+      m = b.match(/"id":"(\d+)"/); if(m) id=m[1];
+      m = b.match(/"reference_id":"([^"]+)"/); if(m) ref=m[1];
+      m = b.match(/"container_type":"(\w+)"/); if(m) tipo=m[1];
+      if(!ref){ m = b.match(/Envio:\s*([0-9]+\/[A-Za-z0-9]+)/i); if(m) ref=m[1]; }
+      if(!id){ m = b.match(/\^FD(\d{8,})\^FS/); if(m) id=m[1]; }
+      if(!tipo){ tipo = /PALLET|PPI/i.test(b) ? 'ppi' : 'box'; }
+      if(!id || !ref) continue;
+      map.set(id, { id, reference_id:ref, tipo, etiqueta:(ref.split('/')[1]||''), envio:(ref.split('/')[0]||'') });
+    }
+    return [...map.values()];
+  }
+
+  async function efRegistrarDesdeZpl(){
+    const items = parseInbItems(zplText.value);
+    if(!items.length) return null;
+    try{
+      const r = await authFetch(api('/api/despacho/full/registrar'), {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ items })
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo registrar');
+      return d;
+    }catch(e){ console.error('registrar full', e); return null; }
+  }
+
+  async function efRefreshEnvios(){
+    const cont = $('ef-envios'); if(!cont) return;
+    try{
+      const r = await authFetch(api('/api/despacho/full/envios')); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'error');
+      if(!d.envios || !d.envios.length){
+        cont.innerHTML = '<div class="ef-empty" style="height:auto; padding:20px">Todavía no hay envíos cargados. Subí un archivo de etiquetas Full.</div>';
+        return;
+      }
+      cont.innerHTML = d.envios.map(e=>{
+        const det = `${e.bultos} bulto${e.bultos===1?'':'s'} · ${e.pallets} pallet${e.pallets===1?'':'s'}`;
+        const prog = e.completo
+          ? '<span class="ef-envio-prog" style="color:var(--ok)">✓ Completo</span>'
+          : `<span class="ef-envio-prog" style="color:var(--colecta)">faltan ${e.faltan} de ${e.total}</span>`;
+        return `<div class="ef-envio${e.completo?' completo':''}">
+          <span class="ef-envio-id">${esc(e.envio)}</span>
+          <span class="ef-envio-meta">${det}</span>
+          ${prog}
+          <button class="ef-btn ${e.completo?'ef-ghost':'ef-primary'}" style="width:auto; padding:9px 16px" onclick="efAbrirColecta('${esc(e.envio)}')">Abrir colecta</button>
+        </div>`;
+      }).join('');
+    }catch(e){ console.error('envios full', e); }
+  }
+
+  async function efAbrirColecta(envio){
+    efEnvio = String(envio);
+    try{
+      const r = await authFetch(api('/api/despacho/full/estado?envio='+encodeURIComponent(envio)));
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'error');
+      efItems = d.items || [];
+      $('ef-scan-title').textContent = 'Colecta Full ' + envio;
+      $('ef-scan-sub').textContent = `${d.bultos} bultos · ${d.pallets} pallets`;
+      efPintarColecta(d);
+      $('ef-colecta-scan').style.display = 'block';
+      efMsg('', '');
+      $('ef-colecta-scan').scrollIntoView({behavior:'smooth', block:'start'});
+      setTimeout(()=>{ const i=$('ef-scan-input'); if(i) i.focus(); }, 200);
+    }catch(e){ alert('No pude abrir la colecta: '+e.message); }
+  }
+
+  function efPintarColecta(d){
+    const tot = d ? d.total : efItems.length;
+    const e = d ? d.escaneados : efItems.filter(x=>x.escaneado).length;
+    $('ef-sc-tot').textContent = tot;
+    $('ef-sc-esc').textContent = e;
+    $('ef-sc-fal').textContent = tot - e;
+    $('ef-scan-list').innerHTML = efItems.map(it=>{
+      const cls = it.tipo==='ppi' ? 'ppi' : 'box';
+      const tl = it.tipo==='ppi' ? 'Pallet' : 'Bulto';
+      return `<span class="ef-chip ${cls}${it.escaneado?' ok':''}" data-id="${esc(it.id)}"><span class="ef-chip-t">${tl}</span>${esc(it.etiqueta)}${it.escaneado?' ✓':''}</span>`;
+    }).join('');
+  }
+
+  function efMsg(txt, tipo){
+    const el = $('ef-scan-msg'); if(!el) return;
+    if(!txt){ el.style.display='none'; return; }
+    el.style.display='block'; el.className='ef-status'+(tipo?' '+tipo:''); el.textContent=txt;
+  }
+
+  function efRecuento(){
+    const tot=efItems.length, e=efItems.filter(x=>x.escaneado).length;
+    $('ef-sc-tot').textContent=tot; $('ef-sc-esc').textContent=e; $('ef-sc-fal').textContent=tot-e;
+    if(tot>0 && e>=tot) efMsg('✓ Colecta completa: escaneaste los '+tot+' ítems del envío '+efEnvio+'.', 'ok');
+  }
+
+  async function efEscanear(codigo){
+    const c = String(codigo||'').trim(); if(!c) return;
+    const now = Date.now();
+    if(c===efLastScan && now-efLastTs < 1500) return; // anti-rebote de la cámara
+    efLastScan=c; efLastTs=now;
+    try{
+      const r = await authFetch(api('/api/despacho/full/escanear'), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ codigo:c, envio: efEnvio })
+      });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'error');
+      const tl = d.tipo==='ppi' ? 'Pallet' : 'Bulto';
+      if(d.resultado==='ok'){
+        if(typeof beep==='function') beep(false);
+        const it = efItems.find(x=>x.id===d.id); if(it) it.escaneado=true;
+        efPintarColecta({total:d.total, escaneados:d.escaneados}); efRecuento();
+        efMsg(`✓ ${tl} ${d.etiqueta} · faltan ${d.faltan}`, 'ok');
+      } else if(d.resultado==='duplicada'){
+        if(typeof beep==='function') beep(false);
+        efMsg(`Ya estaba escaneado: ${tl} ${d.etiqueta}`, '');
+      } else if(d.resultado==='otro_envio'){
+        if(typeof beep==='function') beep(true);
+        efMsg(`⛔ Ese ítem es del envío ${d.envio_real}, no del ${efEnvio}`, 'err');
+      } else if(d.resultado==='no_pertenece'){
+        if(typeof beep==='function') beep(true);
+        efMsg('⛔ Ese código no es de ningún envío Full cargado', 'err');
+      }
+    }catch(e){ if(typeof beep==='function') beep(true); efMsg('Error: '+e.message, 'err'); }
+  }
+
+  function efScanInput(){
+    const i=$('ef-scan-input'); const v=(i.value||'').trim(); i.value='';
+    if(v) efEscanear(v);
+    i.focus();
+  }
+
+  async function efToggleCam(){
+    const reader = $('ef-scan-reader'), btn = $('ef-scan-cam');
+    if(efCamOn){ await efStopCam(); return; }
+    if(typeof Html5Qrcode==='undefined'){ efMsg('No cargó el lector de cámara. Recargá la página.', 'err'); return; }
+    reader.style.display='block';
+    try{
+      efScanner = new Html5Qrcode('ef-scan-reader');
+      const cfg = { fps:10, qrbox:(w,h)=>{ const m=Math.floor(Math.min(w,h)*0.8); return {width:m, height:Math.floor(m*0.7)}; } };
+      if(typeof Html5QrcodeSupportedFormats!=='undefined')
+        cfg.formatsToSupport = [Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128];
+      await efScanner.start({ facingMode:'environment' }, cfg, (txt)=>efEscanear(txt), ()=>{});
+      efCamOn=true; btn.textContent='✕ Cerrar cámara';
+    }catch(e){ efMsg('No pude abrir la cámara: '+e.message, 'err'); reader.style.display='none'; }
+  }
+
+  async function efStopCam(){
+    const reader = $('ef-scan-reader'), btn = $('ef-scan-cam');
+    if(efScanner){ try{ await efScanner.stop(); await efScanner.clear(); }catch(e){} efScanner=null; }
+    efCamOn=false; if(reader) reader.style.display='none'; if(btn) btn.textContent='📷 Cámara';
+  }
+
+  function efCerrarColecta(){
+    efStopCam();
+    $('ef-colecta-scan').style.display='none';
+    efEnvio=null; efItems=[];
+    efRefreshEnvios();
+  }
+
+  // Exponer lo que se llama desde el HTML y desde verTab
+  window.efAbrirColecta = efAbrirColecta;
+  window.efCerrarColecta = efCerrarColecta;
+  window.efScanInput = efScanInput;
+  window.efToggleCam = efToggleCam;
+  window.efStopCam = efStopCam;
+  window.efRefreshEnvios = efRefreshEnvios;
 })();
 </script>
 </body>
