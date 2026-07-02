@@ -472,8 +472,8 @@
   #view-full .ef-wrap{max-width:1200px; margin:0 auto; padding:18px 0}
   #view-full .ef-grid{display:grid; grid-template-columns:380px 1fr; gap:16px; align-items:start}
   #view-full .ef-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px}
-  #view-full .ef-title{font-weight:800; font-size:18px; color:var(--ink); letter-spacing:-.01em; margin-bottom:6px}
-  #view-full .ef-sub{color:var(--muted2); font-size:13px; line-height:1.5; margin:0 0 14px}
+  .ef-title{font-weight:800; font-size:18px; color:var(--ink); letter-spacing:-.01em; margin-bottom:6px}
+  .ef-sub{color:var(--muted2); font-size:13px; line-height:1.5; margin:0 0 14px}
   #view-full .ef-drop{border:2px dashed var(--line2); border-radius:var(--radius-sm); padding:26px 14px; text-align:center; cursor:pointer; transition:.15s; background:#FAFBFC}
   #view-full .ef-drop:hover{border-color:var(--flex); background:#F2F7FF}
   #view-full .ef-drop.dragover{border-color:var(--flex); background:#EAF2FF}
@@ -488,15 +488,15 @@
   #view-full .ef-input{width:100%; padding:9px 10px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-size:14px; font-family:inherit; color:var(--ink); background:var(--surface)}
   #view-full .ef-stat{margin-top:16px; padding:12px; background:var(--bg); border-radius:var(--radius-sm); text-align:center; font-size:13px; color:var(--muted2)}
   #view-full .ef-stat b{font-size:22px; color:var(--ink); display:block; font-family:'JetBrains Mono',monospace}
-  #view-full .ef-btns{display:flex; flex-direction:column; gap:8px; margin-top:14px}
-  #view-full .ef-btn{width:100%; padding:12px; border:none; border-radius:10px; font-weight:700; font-size:14px; font-family:inherit}
-  #view-full .ef-primary{background:var(--flex); color:#fff} #view-full .ef-primary:hover{background:var(--flex-d)}
-  #view-full .ef-secondary{background:var(--colecta); color:#fff} #view-full .ef-secondary:hover{background:var(--colecta-d)}
-  #view-full .ef-ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line2)} #view-full .ef-ghost:hover{background:#F5F5F5}
-  #view-full .ef-danger{background:var(--surface); color:var(--err); border:1px solid var(--line2)} #view-full .ef-danger:hover{background:#FFF1F2}
-  #view-full .ef-status{margin-top:14px; padding:11px 12px; border-radius:var(--radius-sm); font-size:13px; background:var(--bg); color:var(--muted2)}
-  #view-full .ef-status.ok{background:#F0FBF4; color:var(--ok)}
-  #view-full .ef-status.err{background:#FFF1F2; color:var(--err)}
+  .ef-btns{display:flex; flex-direction:column; gap:8px; margin-top:14px}
+  .ef-btn{width:100%; padding:12px; border:none; border-radius:10px; font-weight:700; font-size:14px; font-family:inherit}
+  .ef-primary{background:var(--flex); color:#fff} .ef-primary:hover{background:var(--flex-d)}
+  .ef-secondary{background:var(--colecta); color:#fff} .ef-secondary:hover{background:var(--colecta-d)}
+  .ef-ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line2)} .ef-ghost:hover{background:#F5F5F5}
+  .ef-danger{background:var(--surface); color:var(--err); border:1px solid var(--line2)} .ef-danger:hover{background:#FFF1F2}
+  .ef-status{margin-top:14px; padding:11px 12px; border-radius:var(--radius-sm); font-size:13px; background:var(--bg); color:var(--muted2)}
+  .ef-status.ok{background:#F0FBF4; color:var(--ok)}
+  .ef-status.err{background:#FFF1F2; color:var(--err)}
   #view-full .ef-textarea{width:100%; min-height:90px; margin-top:5px; padding:10px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-family:'JetBrains Mono',monospace; font-size:12px; resize:vertical; color:var(--ink2)}
   #view-full .ef-preview-head{display:flex; flex-direction:column; gap:3px; margin-bottom:12px}
   #view-full .ef-preview{border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; min-height:520px; background:var(--bg)}
@@ -508,25 +508,25 @@
     #view-full .ef-preview, #view-full .ef-empty{min-height:380px}
   }
   /* ===== COLECTA FULL ===== */
-  #view-full .ef-envio{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:14px; border:1px solid var(--line2); border-radius:var(--radius-sm); margin-bottom:10px}
-  #view-full .ef-envio.completo{border-color:#9BE3BC; background:#F0FBF4}
-  #view-full .ef-envio-id{font-weight:800; font-size:16px; color:var(--ink); font-family:'JetBrains Mono',monospace}
-  #view-full .ef-envio-meta{font-size:13px; color:var(--muted2); flex:1; min-width:130px}
-  #view-full .ef-envio-prog{font-weight:700; font-size:13px}
-  #view-full .ef-scan-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px}
-  #view-full .ef-scan-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
-  #view-full .ef-sbox{background:var(--bg); border-radius:var(--radius-sm); padding:12px; text-align:center}
-  #view-full .ef-sbox.ef-falta .ef-sn{color:var(--colecta)}
-  #view-full .ef-sn{font-size:26px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--ink); line-height:1}
-  #view-full .ef-sl{font-size:11px; color:var(--muted2); margin-top:3px}
-  #view-full .ef-scan-row{display:flex; gap:8px; align-items:stretch}
-  #view-full .ef-scan-row input{flex:1; padding:11px 12px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-size:15px; font-family:inherit; color:var(--ink)}
-  #view-full .ef-scan-list{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px}
-  #view-full .ef-chip{display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; border:1px solid var(--line2); font-size:12px; font-weight:700; color:var(--muted2); background:var(--surface)}
-  #view-full .ef-chip.ok{background:#E9F9F0; border-color:#9BE3BC; color:var(--ok)}
-  #view-full .ef-chip .ef-chip-t{font-size:10px; font-weight:800; padding:1px 5px; border-radius:6px; background:var(--line); color:var(--muted2)}
-  #view-full .ef-chip.ppi .ef-chip-t{background:#FCE9D4; color:var(--colecta-d)}
-  #view-full .ef-chip.box .ef-chip-t{background:#E3EDFB; color:var(--flex-d)}
+  .ef-envio{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:14px; border:1px solid var(--line2); border-radius:var(--radius-sm); margin-bottom:10px}
+  .ef-envio.completo{border-color:#9BE3BC; background:#F0FBF4}
+  .ef-envio-id{font-weight:800; font-size:16px; color:var(--ink); font-family:'JetBrains Mono',monospace}
+  .ef-envio-meta{font-size:13px; color:var(--muted2); flex:1; min-width:130px}
+  .ef-envio-prog{font-weight:700; font-size:13px}
+  .ef-scan-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px}
+  .ef-scan-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
+  .ef-sbox{background:var(--bg); border-radius:var(--radius-sm); padding:12px; text-align:center}
+  .ef-sbox.ef-falta .ef-sn{color:var(--colecta)}
+  .ef-sn{font-size:26px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--ink); line-height:1}
+  .ef-sl{font-size:11px; color:var(--muted2); margin-top:3px}
+  .ef-scan-row{display:flex; gap:8px; align-items:stretch}
+  .ef-scan-row input{flex:1; padding:11px 12px; border:1px solid var(--line2); border-radius:var(--radius-sm); font-size:15px; font-family:inherit; color:var(--ink)}
+  .ef-scan-list{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px}
+  .ef-chip{display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; border:1px solid var(--line2); font-size:12px; font-weight:700; color:var(--muted2); background:var(--surface)}
+  .ef-chip.ok{background:#E9F9F0; border-color:#9BE3BC; color:var(--ok)}
+  .ef-chip .ef-chip-t{font-size:10px; font-weight:800; padding:1px 5px; border-radius:6px; background:var(--line); color:var(--muted2)}
+  .ef-chip.ppi .ef-chip-t{background:#FCE9D4; color:var(--colecta-d)}
+  .ef-chip.box .ef-chip-t{background:#E3EDFB; color:var(--flex-d)}
 </style>
 </head>
 <body>
@@ -551,7 +551,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v43</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v44</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -676,6 +676,35 @@
         <div id="list-despachadas"></div>
       </div>
 
+      <div class="card-box" id="ef-full-card">
+        <h2>📦 Colecta Full · verificar envíos</h2>
+        <p class="hint">Los envíos a Full se registran al convertir las etiquetas en la pestaña <b>Envíos Full</b> (bultos y pallets; las etiquetas de producto quedan afuera). Abrí la colecta y escaneá cada uno para confirmar que despachaste todo.</p>
+        <div id="ef-envios"><div class="status">Todavía no hay envíos cargados. Subí un archivo de etiquetas en la pestaña Envíos Full.</div></div>
+
+        <div id="ef-colecta-scan" style="display:none; margin-top:14px; border-top:1px solid var(--line); padding-top:14px">
+          <div class="ef-scan-head">
+            <div>
+              <div class="ef-title" id="ef-scan-title" style="margin:0">Colecta Full</div>
+              <div class="ef-sub" id="ef-scan-sub" style="margin:0">—</div>
+            </div>
+            <button class="ef-btn ef-ghost" style="width:auto; padding:8px 14px" onclick="efCerrarColecta()">Cerrar</button>
+          </div>
+          <div class="ef-scan-stats">
+            <div class="ef-sbox"><div class="ef-sn" id="ef-sc-esc">0</div><div class="ef-sl">escaneados</div></div>
+            <div class="ef-sbox ef-falta"><div class="ef-sn" id="ef-sc-fal">0</div><div class="ef-sl">faltan</div></div>
+            <div class="ef-sbox"><div class="ef-sn" id="ef-sc-tot">0</div><div class="ef-sl">total</div></div>
+          </div>
+          <div class="ef-scan-row">
+            <input id="ef-scan-input" placeholder="Escaneá con la pistola o tipeá el código" autocomplete="off"
+                   onkeydown="if(event.key==='Enter') efScanInput()">
+            <button class="ef-btn ef-secondary" style="width:auto; padding:10px 16px" id="ef-scan-cam" onclick="efToggleCam()">📷 Cámara</button>
+          </div>
+          <div id="ef-scan-reader" style="display:none; max-width:420px; margin:10px auto"></div>
+          <div id="ef-scan-msg" class="ef-status" style="display:none; margin-top:10px"></div>
+          <div id="ef-scan-list" class="ef-scan-list"></div>
+        </div>
+      </div>
+
       <div id="camion-picker" class="camion-picker" style="display:none"></div>
     </section>
 
@@ -788,36 +817,6 @@
             </div>
           </div>
         </div>
-
-        <div class="ef-card" style="margin-top:16px">
-          <div class="ef-title">Colecta Full · verificar envíos</div>
-          <p class="ef-sub">Al subir el archivo registro los bultos y pallets del envío (descarto las etiquetas de producto). Después abrí la colecta y escaneá cada uno para confirmar que despachaste todo.</p>
-          <div id="ef-envios"><div class="ef-empty" style="height:auto; padding:20px">Todavía no hay envíos cargados. Subí un archivo de etiquetas Full.</div></div>
-        </div>
-
-        <div id="ef-colecta-scan" class="ef-card" style="display:none; margin-top:16px">
-          <div class="ef-scan-head">
-            <div>
-              <div class="ef-title" id="ef-scan-title" style="margin:0">Colecta Full</div>
-              <div class="ef-sub" id="ef-scan-sub" style="margin:0">—</div>
-            </div>
-            <button class="ef-btn ef-ghost" style="width:auto; padding:8px 14px" onclick="efCerrarColecta()">Cerrar</button>
-          </div>
-          <div class="ef-scan-stats">
-            <div class="ef-sbox"><div class="ef-sn" id="ef-sc-esc">0</div><div class="ef-sl">escaneados</div></div>
-            <div class="ef-sbox ef-falta"><div class="ef-sn" id="ef-sc-fal">0</div><div class="ef-sl">faltan</div></div>
-            <div class="ef-sbox"><div class="ef-sn" id="ef-sc-tot">0</div><div class="ef-sl">total</div></div>
-          </div>
-          <div class="ef-scan-row">
-            <input id="ef-scan-input" placeholder="Escaneá con la pistola o tipeá el código" autocomplete="off"
-                   onkeydown="if(event.key==='Enter') efScanInput()">
-            <button class="ef-btn ef-secondary" style="width:auto; padding:10px 16px" id="ef-scan-cam" onclick="efToggleCam()">📷 Cámara</button>
-          </div>
-          <div id="ef-scan-reader" style="display:none; max-width:420px; margin:10px auto"></div>
-          <div id="ef-scan-msg" class="ef-status" style="display:none; margin-top:10px"></div>
-          <div id="ef-scan-list" class="ef-scan-list"></div>
-        </div>
-
       </div>
     </section>
 
@@ -1043,8 +1042,8 @@
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
     }
     if(name === 'config') cargarConfigCamiones();
-    if(name === 'full' && typeof efRefreshEnvios === 'function') efRefreshEnvios();
-    if(name !== 'full' && typeof efStopCam === 'function') efStopCam();
+    if(name === 'despachar' && typeof efRefreshEnvios === 'function') efRefreshEnvios();
+    if(name !== 'despachar' && typeof efStopCam === 'function') efStopCam();
     window.scrollTo(0, 0);
   }
   // Contadores numéricos en las pestañas (estilo ML)
@@ -2480,7 +2479,7 @@
       // Registrar bultos/pallets Full (si el archivo los tiene) y refrescar la lista de colectas
       const reg = await efRegistrarDesdeZpl();
       if(reg && reg.total){
-        setStatus(`PDF listo (${labels.length} etiquetas). Envío ${reg.envio} registrado: ${reg.bultos} bultos + ${reg.pallets} pallets. Abrí la Colecta Full más abajo para verificar.`, 'ok');
+        setStatus(`PDF listo (${labels.length} etiquetas). Envío ${reg.envio} registrado: ${reg.bultos} bultos + ${reg.pallets} pallets. Verificalo desde "Colecta Full" en la pestaña Despachar.`, 'ok');
         efRefreshEnvios();
       }
     }catch(err){
