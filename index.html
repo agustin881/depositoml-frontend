@@ -359,6 +359,15 @@
   .cam-form input{padding:10px 12px; border:1px solid var(--line2); border-radius:10px; font-size:14px}
   .cam-form input#cam-pat{width:160px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; font-weight:700}
   .cam-form input#cam-chofer{flex:1; min-width:200px}
+  .cam-form.cam-form-2{margin-top:0}
+  .cam-form select#cam-tipo{padding:10px 12px; border:1px solid var(--line2); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--ink); width:130px}
+  .cam-form input#cam-tel{width:180px}
+  .cam-form input#cam-obs{flex:1; min-width:200px}
+  .cam-tipo{display:inline-block; font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; margin-left:6px; vertical-align:1px; background:var(--line); color:var(--muted2)}
+  .cam-tipo-chasis{background:#E3EDFB; color:var(--flex-d)}
+  .cam-tipo-semi{background:#FCE9D4; color:var(--colecta-d)}
+  .cam-tipo-sprinter{background:#E9F9F0; color:var(--ok)}
+  .cam-extra{display:block; font-size:12px; color:var(--muted); margin-top:2px}
   .cam-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1px solid var(--line2); border-radius:9px; margin-bottom:8px}
   .cam-row .cam-pat{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; min-width:90px}
   .cam-row .cam-desc{flex:1; color:var(--muted2)}
@@ -542,7 +551,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v41</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v43</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -822,6 +831,16 @@
         <div class="cam-form">
           <input type="text" id="cam-pat" placeholder="Patente (ej. JZF500)" autocomplete="off" maxlength="12">
           <input type="text" id="cam-chofer" placeholder="Chofer / descripción (ej. Delfina Rodríguez)" autocomplete="off">
+        </div>
+        <div class="cam-form cam-form-2">
+          <select id="cam-tipo">
+            <option value="">Tipo…</option>
+            <option value="chasis">Chasis</option>
+            <option value="semi">Semi</option>
+            <option value="sprinter">Sprinter</option>
+          </select>
+          <input type="tel" id="cam-tel" placeholder="Teléfono (ej. 341 5123456)" autocomplete="off" maxlength="25">
+          <input type="text" id="cam-obs" placeholder="Observaciones (ej. entra por portón 2)" autocomplete="off">
           <button class="btn-scan" onclick="addCamionConfig()">Agregar</button>
         </div>
         <div class="status" id="cam-status"></div>
@@ -1965,9 +1984,11 @@
       if(!_camionesData.length){ cont.innerHTML='<div class="status">Todavía no guardaste ningún camión. Agregá el primero arriba.</div>'; return; }
       let html='';
       for(const c of _camionesData){
+        const tipoTag = c.tipo ? `<span class="cam-tipo cam-tipo-${esc(c.tipo)}">${esc(c.tipo.charAt(0).toUpperCase()+c.tipo.slice(1))}</span>` : '';
+        const extra = [c.telefono ? '📞 '+esc(c.telefono) : '', c.observaciones ? esc(c.observaciones) : ''].filter(Boolean).join(' · ');
         html+=`<div class="cam-row">
           <span class="cam-pat">${esc(c.patente)}</span>
-          <span class="cam-desc">${esc(c.descripcion)||'<i>sin chofer</i>'}</span>
+          <span class="cam-desc">${esc(c.descripcion)||'<i>sin chofer</i>'} ${tipoTag}${extra?`<span class="cam-extra">${extra}</span>`:''}</span>
           <span class="cam-acts">
             <button onclick="editarCamion('${c.id}')">Editar</button>
             <button class="del" onclick="borrarCamion('${c.id}','${esc(c.patente)}')">Borrar</button>
@@ -1979,16 +2000,21 @@
   async function addCamionConfig(){
     const pat=(document.getElementById('cam-pat').value||'').trim();
     const chofer=(document.getElementById('cam-chofer').value||'').trim();
+    const tipo=(document.getElementById('cam-tipo').value||'').trim();
+    const tel=(document.getElementById('cam-tel').value||'').trim();
+    const obs=(document.getElementById('cam-obs').value||'').trim();
     const st=document.getElementById('cam-status');
     if(!pat){ st.className='status err'; st.textContent='Escribí la patente.'; return; }
     st.className='status'; st.textContent='Guardando…';
     try{
       const r=await authFetch(`${API}/api/despacho/camiones`,{
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({patente:pat, descripcion:chofer})});
+        body:JSON.stringify({patente:pat, descripcion:chofer, tipo, telefono:tel, observaciones:obs})});
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo guardar');
       document.getElementById('cam-pat').value=''; document.getElementById('cam-chofer').value='';
+      document.getElementById('cam-tipo').value=''; document.getElementById('cam-tel').value='';
+      document.getElementById('cam-obs').value='';
       if(d.existia) st.textContent='Esa patente ya estaba guardada.'; else st.textContent='';
       cargarConfigCamiones();
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
@@ -1997,10 +2023,18 @@
     const c=_camionesData.find(x=>String(x.id)===String(id)); if(!c) return;
     const pat=prompt('Patente:', c.patente); if(pat===null) return;
     const chofer=prompt('Chofer / descripción:', c.descripcion||''); if(chofer===null) return;
+    let tipo=prompt('Tipo (chasis / semi / sprinter):', c.tipo||''); if(tipo===null) return;
+    tipo=tipo.trim().toLowerCase();
+    if(tipo && !['chasis','semi','sprinter'].includes(tipo)){
+      const st=document.getElementById('cam-status'); st.className='status err';
+      st.textContent='Tipo inválido: tiene que ser chasis, semi o sprinter (o vacío).'; return;
+    }
+    const tel=prompt('Teléfono:', c.telefono||''); if(tel===null) return;
+    const obs=prompt('Observaciones:', c.observaciones||''); if(obs===null) return;
     try{
       const r=await authFetch(`${API}/api/despacho/camiones/editar`,{
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({id, patente:pat.trim(), descripcion:chofer.trim()})});
+        body:JSON.stringify({id, patente:pat.trim(), descripcion:chofer.trim(), tipo, telefono:tel.trim(), observaciones:obs.trim()})});
       const d=await r.json(); if(!r.ok) throw new Error(d.error||'');
       cargarConfigCamiones();
     }catch(e){ const st=document.getElementById('cam-status'); st.className='status err'; st.textContent='Error: '+esc(e.message); }
@@ -2341,6 +2375,26 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const splitLabels = text => { const m = (text||'').match(/\^XA[\s\S]*?\^XZ/g); return m ? m : []; };
 
+  // Nombre inteligente para el archivo descargado, según tipo de etiqueta + envío del txt
+  function efNombreDescarga(zpl){
+    const z = zpl || '';
+    let envio = '';
+    let m = z.match(/"reference_id":"(\d{4,})/);        if(m) envio = m[1];
+    if(!envio){ m = z.match(/Env[ií]o:?\s*(\d{4,})/i);  if(m) envio = m[1]; }
+    let hasPpi = /"container_type":"ppi"/.test(z);
+    let hasBox = /"container_type":"box"/.test(z);
+    if(!hasPpi && !hasBox){                              // sin JSON: caemos al texto de la etiqueta
+      hasPpi = /PALLET DE PRODUCTOS/i.test(z);
+      hasBox = /\bBULTOS\b/.test(z);
+    }
+    let tipo;
+    if(hasPpi && hasBox) tipo = 'pallets y bultos';
+    else if(hasPpi)      tipo = 'pallets';
+    else if(hasBox)      tipo = 'bultos';
+    else                 tipo = 'productos';
+    return `Etiquetas ${tipo}${envio ? ' ' + envio : ''}.txt`;
+  }
+
   const renderDrop = (n=0) => {
     if(!currentFileName){
       dropzone.classList.remove('loaded');
@@ -2445,7 +2499,7 @@
     if(!text) return setStatus('No hay ZPL limpio para descargar.', 'err');
     const blob = new Blob([text], { type:'text/plain;charset=utf-8' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'etiquetas_limpias.zpl'; a.click();
+    a.href = URL.createObjectURL(blob); a.download = efNombreDescarga(zplText.value); a.click();
     URL.revokeObjectURL(a.href);
   });
 
