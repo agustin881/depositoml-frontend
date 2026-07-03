@@ -81,6 +81,9 @@
   /* ===== PANEL VIVO / IMPRIMIR ===== */
   .vivo-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px}
   .vivo-estado{font-size:13px; color:var(--muted2); display:flex; align-items:center; gap:7px}
+  .dep-info{font-size:12.5px; color:var(--muted2); background:#EAF2FF; border:1px solid #C7DBF7; border-radius:10px; padding:8px 12px; margin:-4px 0 12px; line-height:1.5}
+  .dep-info b{color:var(--flex-d); font-family:'JetBrains Mono',monospace}
+  .dep-info .dep-warn{color:var(--colecta-d); font-weight:700}
   .vivo-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ok)}
   .vivo-refresh{padding:8px 14px; font-size:13px; background:var(--surface); border:1px solid var(--line2); border-radius:10px; color:var(--ink); font-weight:600}
 
@@ -511,6 +514,8 @@
   .ef-envio{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:14px; border:1px solid var(--line2); border-radius:var(--radius-sm); margin-bottom:10px}
   .ef-envio.completo{border-color:#9BE3BC; background:#F0FBF4}
   .ef-envio-id{font-weight:800; font-size:16px; color:var(--ink); font-family:'JetBrains Mono',monospace}
+  .ef-dep{display:inline-flex; align-items:center; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; background:#EAF2FF; color:var(--flex-d); border:1px solid #C7DBF7; font-family:'JetBrains Mono',monospace}
+  .ef-dep.ef-dep-na{background:#FFF7ED; color:var(--colecta-d); border-color:#FBD9AF; font-family:inherit; font-weight:600}
   .ef-envio-meta{font-size:13px; color:var(--muted2); flex:1; min-width:130px}
   .ef-envio-prog{font-weight:700; font-size:13px}
   .ef-scan-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px}
@@ -551,7 +556,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v45</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v47</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -574,6 +579,7 @@
         <div class="vivo-estado" id="vivo-estado">Cargando panel…</div>
         <button class="vivo-refresh" onclick="cargarPanel(true)">↻ Actualizar ahora</button>
       </div>
+      <div id="dep-info" class="dep-info" style="display:none"></div>
       <div class="grid">
         <section class="panel" data-t="flex"><div class="body">
           <h2><span class="tipo-dot"></span>Flex</h2><div class="sub">Self-service · logística propia</div>
@@ -1090,9 +1096,27 @@
 
   // ---------- PANEL VIVO ----------
   let _panelData = { flex: [], colecta: [] };
+
+  // Muestra qué depósito de origen está filtrando la impresión y qué queda afuera
+  async function cargarDepositos(){
+    const el = document.getElementById('dep-info'); if(!el) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/depositos`); const d = await r.json();
+      if(!r.ok || !d) return;
+      const deps = d.depositos || [];
+      const incluidos = deps.filter(x=>x.incluidos>0);
+      const excluidos = deps.filter(x=>x.excluidos>0);
+      let html = `📍 Imprimiendo solo el depósito que coincide con <b>${esc(d.filtro)}</b>`;
+      if(incluidos.length) html += `: ${incluidos.map(x=>`${esc(x.deposito)} (${x.incluidos})`).join(' · ')}`;
+      if(excluidos.length) html += ` — <span class="dep-warn">quedan afuera ${excluidos.reduce((a,x)=>a+x.excluidos,0)} envío(s) de: ${excluidos.map(x=>`${esc(x.deposito)} (${x.excluidos})`).join(' · ')}</span>`;
+      if(!deps.length) html += ` (todavía sin datos — actualizá el panel)`;
+      el.innerHTML = html; el.style.display = 'block';
+    }catch(e){ /* informativo: si falla no molesta */ }
+  }
   let _panelTimer = null;
 
   async function cargarPanel(manual){
+    cargarDepositos();
     const est = document.getElementById('vivo-estado');
     if(manual){
       est.innerHTML = '<span class="vivo-dot" style="background:#B88207"></span>Sincronizando con Mercado Libre… (la primera carga tarda unos minutos, podés ir viendo cómo se llena)';
@@ -2521,15 +2545,17 @@
     const map = new Map();
     for(const b of blocks){
       if(!/"t":"inb"/.test(b) && !/COLECTA FULL/i.test(b)) continue;
-      let id=null, ref=null, tipo=null, m;
+      let id=null, ref=null, tipo=null, destino=null, deposito=null, m;
       m = b.match(/"id":"(\d+)"/); if(m) id=m[1];
       m = b.match(/"reference_id":"([^"]+)"/); if(m) ref=m[1];
       m = b.match(/"container_type":"(\w+)"/); if(m) tipo=m[1];
       if(!ref){ m = b.match(/Envio:\s*([0-9]+\/[A-Za-z0-9]+)/i); if(m) ref=m[1]; }
       if(!id){ m = b.match(/\^FD(\d{8,})\^FS/); if(m) id=m[1]; }
       if(!tipo){ tipo = /PALLET|PPI/i.test(b) ? 'ppi' : 'box'; }
+      m = b.match(/([A-Z]{2,4}\d{1,2})\s*>\s*([A-Z]{2,4}\d{1,2})\b/); if(m) destino=m[2];   // "XRO1 > FBA01" (tolera ^FD pegado)
+      m = b.match(/almacenamiento[\s\S]{0,120}?-\s*([A-Z]{2,6}\d{1,3})\b/i); if(m) deposito=m[1]; // "... - ARBA01"
       if(!id || !ref) continue;
-      map.set(id, { id, reference_id:ref, tipo, etiqueta:(ref.split('/')[1]||''), envio:(ref.split('/')[0]||'') });
+      map.set(id, { id, reference_id:ref, tipo, etiqueta:(ref.split('/')[1]||''), envio:(ref.split('/')[0]||''), destino, deposito });
     }
     return [...map.values()];
   }
@@ -2558,11 +2584,13 @@
       }
       cont.innerHTML = d.envios.map(e=>{
         const det = `${e.bultos} bulto${e.bultos===1?'':'s'} · ${e.pallets} pallet${e.pallets===1?'':'s'}`;
+        const depTxt = e.destino || e.deposito ? `<span class="ef-dep">📍 ${esc(e.destino||'')}${e.deposito?(e.destino?' · ':'')+esc(e.deposito):''}</span>` : '<span class="ef-dep ef-dep-na">📍 sin depósito (re-subí el archivo)</span>';
         const prog = e.completo
           ? '<span class="ef-envio-prog" style="color:var(--ok)">✓ Completo</span>'
           : `<span class="ef-envio-prog" style="color:var(--colecta)">faltan ${e.faltan} de ${e.total}</span>`;
         return `<div class="ef-envio${e.completo?' completo':''}">
           <span class="ef-envio-id">${esc(e.envio)}</span>
+          ${depTxt}
           <span class="ef-envio-meta">${det}</span>
           ${prog}
           <button class="ef-btn ${e.completo?'ef-ghost':'ef-primary'}" style="width:auto; padding:9px 16px" onclick="efAbrirColecta('${esc(e.envio)}')">Abrir colecta</button>
@@ -2579,7 +2607,8 @@
       if(!r.ok) throw new Error(d.error||'error');
       efItems = d.items || [];
       $('ef-scan-title').textContent = 'Colecta Full ' + envio;
-      $('ef-scan-sub').textContent = `${d.bultos} bultos · ${d.pallets} pallets`;
+      const depStr = (d.destino || d.deposito) ? ` · 📍 ${d.destino||''}${d.deposito?(d.destino?' · ':'')+d.deposito:''}` : '';
+      $('ef-scan-sub').textContent = `${d.bultos} bultos · ${d.pallets} pallets${depStr}`;
       efPintarColecta(d);
       $('ef-colecta-scan').style.display = 'block';
       efMsg('', '');
