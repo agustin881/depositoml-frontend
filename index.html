@@ -84,6 +84,9 @@
   .dep-info{font-size:12.5px; color:var(--muted2); background:#EAF2FF; border:1px solid #C7DBF7; border-radius:10px; padding:8px 12px; margin:-4px 0 12px; line-height:1.5}
   .dep-info b{color:var(--flex-d); font-family:'JetBrains Mono',monospace}
   .dep-info .dep-warn{color:var(--colecta-d); font-weight:700}
+  .dep-selector{margin-left:10px; padding:5px 8px; border:1px solid var(--line2); border-radius:8px; font-size:12.5px; font-family:inherit; font-weight:600; background:var(--surface); color:var(--ink); max-width:230px; cursor:pointer}
+  .dep-selector.otro{background:#FFF3E4; border-color:var(--colecta); color:var(--colecta-d)}
+  @media(max-width:640px){ .dep-selector{max-width:140px; font-size:11.5px} }
   .otrodep-row{display:flex; gap:8px; margin:10px 0}
   .otrodep-row select{flex:1; max-width:420px; padding:10px 12px; border:1px solid var(--line2); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--ink)}
   .otrodep-tipo{margin:12px 0; padding:12px; border:1px solid var(--line2); border-radius:10px; font-size:14px; color:var(--ink)}
@@ -562,7 +565,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v48</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v49</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -624,17 +627,6 @@
           <button onclick="reimprimirVenta()" id="btn-reimp-venta">Reimprimir esta venta</button>
         </div>
         <div class="status" id="status-reprint"></div><div id="list-impresas"></div>
-      </div>
-
-      <div class="card-box" id="otrodep-card">
-        <h2>🔍 Otros depósitos</h2>
-        <p class="hint">El panel de arriba imprime solo <b>Arévalo Soriano (Rosario)</b>. Acá podés revisar los demás depósitos (FLEX BAIRES, Centro Estant) para verificar si tienen etiquetas pendientes e imprimirlas si hace falta.</p>
-        <div class="otrodep-row">
-          <select id="otrodep-sel"><option value="">Elegí un depósito…</option></select>
-          <button class="btn-scan" onclick="verOtroDeposito()" id="otrodep-btn">Ver etiquetas</button>
-        </div>
-        <div class="status" id="otrodep-status"></div>
-        <div id="otrodep-res"></div>
       </div>
     </section>
 
@@ -1128,68 +1120,55 @@
       if(excluidos.length) html += ` — <span class="dep-warn">quedan afuera ${excluidos.reduce((a,x)=>a+x.excluidos,0)} envío(s) de: ${excluidos.map(x=>`${esc(x.deposito)} (${x.excluidos})`).join(' · ')}</span>`;
       if(!deps.length) html += ` (todavía sin datos — actualizá el panel)`;
       el.innerHTML = html; el.style.display = 'block';
-      // Poblar el selector de "Otros depósitos" (todos menos el nuestro)
-      const sel = document.getElementById('otrodep-sel');
+      // Poblar el selector de depósito de la topbar (Arévalo fijo + los otros)
+      const sel = document.getElementById('dep-selector');
       if(sel){
         const otros = deps.filter(x=>x.excluidos>0);
         const actual = sel.value;
-        sel.innerHTML = '<option value="">Elegí un depósito…</option>' +
-          otros.map(x=>`<option value="${esc(x.deposito)}">${esc(x.deposito)} · ${x.excluidos} envío(s)</option>`).join('');
-        if(actual) sel.value = actual;
+        sel.innerHTML = '<option value="">📍 Arévalo Soriano</option>' +
+          otros.map(x=>`<option value="${esc(x.deposito)}">${esc(x.deposito)} (${x.excluidos})</option>`).join('');
+        sel.value = actual || '';
+        sel.classList.toggle('otro', !!sel.value);
       }
     }catch(e){ /* informativo: si falla no molesta */ }
   }
 
-  // ── Otros depósitos: ver pendientes e imprimir a demanda ──
-  async function verOtroDeposito(){
-    const dep = (document.getElementById('otrodep-sel').value||'').trim();
-    const st = document.getElementById('otrodep-status');
-    const res = document.getElementById('otrodep-res');
-    if(!dep){ st.className='status err'; st.textContent='Elegí un depósito de la lista.'; return; }
-    st.className='status'; st.textContent='Consultando etiquetas de '+dep+'…'; res.innerHTML='';
+  // ── Selector de depósito (topbar): cambia qué etiquetas muestra el panel ──
+  let _depActual = ''; // '' = Arévalo Soriano (nuestro)
+
+  function cambiarDeposito(){
+    const sel = document.getElementById('dep-selector');
+    _depActual = sel.value || '';
+    sel.classList.toggle('otro', !!_depActual);
+    if(_depActual) leerPanelOtroDep();
+    else leerPanel();
+  }
+
+  async function leerPanelOtroDep(){
+    const est = document.getElementById('vivo-estado');
+    est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>Cargando etiquetas de ${esc(_depActual)}…`;
     try{
       const [rf, rc] = await Promise.all([
-        authFetch(`${API}/api/despacho/pendientes?tipo=flex&deposito=${encodeURIComponent(dep)}`),
-        authFetch(`${API}/api/despacho/pendientes?tipo=colecta&deposito=${encodeURIComponent(dep)}`)
+        authFetch(`${API}/api/despacho/pendientes?tipo=flex&deposito=${encodeURIComponent(_depActual)}`),
+        authFetch(`${API}/api/despacho/pendientes?tipo=colecta&deposito=${encodeURIComponent(_depActual)}`)
       ]);
       const df = await rf.json(), dc = await rc.json();
       if(!rf.ok) throw new Error(df.error||'error flex');
       if(!rc.ok) throw new Error(dc.error||'error colecta');
-      st.textContent='';
-      const bloque = (nombre, d) => {
-        const listos = d.listos||[], prog = d.programados||[];
-        let h = `<div class="otrodep-tipo"><b>${nombre}</b> — listos para imprimir: ${listos.length} · programados: ${prog.length}`;
-        if(listos.length){
-          const ids = listos.map(s=>s.shipment_id);
-          h += ` <button class="btn-scan" style="padding:7px 12px; font-size:13px" onclick='imprimirOtroDep(${JSON.stringify(ids)}, "${esc(dep)}")'>Imprimir estos (${listos.length})</button>`;
-          h += '<ul class="otrodep-lista">'+listos.map(s=>`<li><b>${esc(s.sku||'—')}</b> ${esc(s.titulo||'')} ×${s.unidades||1} <span class="otrodep-venta">${esc(s.nro_venta||'')}</span></li>`).join('')+'</ul>';
-        }
-        h += '</div>';
-        return h;
-      };
-      res.innerHTML = bloque('🔵 Flex', df) + bloque('🟠 Colecta', dc);
-      if(!(df.listos||[]).length && !(dc.listos||[]).length && !(df.programados||[]).length && !(dc.programados||[]).length){
-        res.innerHTML = '<div class="status ok">✓ Este depósito no tiene etiquetas pendientes.</div>';
-      }
-    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
-  }
-
-  async function imprimirOtroDep(ids, dep){
-    const st = document.getElementById('otrodep-status');
-    if(!confirm(`Vas a imprimir ${ids.length} etiqueta(s) del depósito:\n${dep}\n\n¿Seguro? (NO son de Arévalo Soriano)`)) return;
-    st.className='status'; st.textContent=`Generando ${ids.length} etiqueta(s) de ${dep}…`;
-    try{
-      const {unidas,fallidas,motivo} = await bajarPdf(`${API}/api/despacho/etiquetas-seleccion?ids=${ids.join(',')}`, `etiquetas_otro_deposito.pdf`);
-      const hayFallas = fallidas && fallidas!=='0';
-      st.className = hayFallas ? 'status err' : 'status ok';
-      st.textContent = `${unidas||ids.length} etiqueta(s) generadas`+(hayFallas?` · ${fallidas} fallaron${motivo?' — '+motivo:''}`:'')+'.';
-      setTimeout(()=>verOtroDeposito(), 1200);
-    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+      const mapear = d => [
+        ...(d.listos||[]).map(s => ({...s, cuando:'hoy'})),
+        ...(d.programados||[]).map(s => ({...s, cuando:'manana'}))
+      ];
+      _panelData.flex = mapear(df); _panelData.colecta = mapear(dc);
+      pintarTanda('flex'); pintarTanda('colecta');
+      est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>📍 Viendo depósito: <b>&nbsp;${esc(_depActual)}</b>&nbsp;· datos en vivo de ML (no es Arévalo Soriano)`;
+    }catch(e){ est.innerHTML = `<span class="vivo-dot" style="background:var(--err)"></span>Error consultando ${esc(_depActual)}: ${esc(e.message)}`; }
   }
   let _panelTimer = null;
 
   async function cargarPanel(manual){
     cargarDepositos();
+    if(_depActual){ await leerPanelOtroDep(); return; } // viendo otro depósito: no pisar con la foto local
     const est = document.getElementById('vivo-estado');
     if(manual){
       est.innerHTML = '<span class="vivo-dot" style="background:#B88207"></span>Sincronizando con Mercado Libre… (la primera carga tarda unos minutos, podés ir viendo cómo se llena)';
@@ -1298,6 +1277,7 @@
     await imprimirIds(tipo, ids, `etiquetas_${tipo}_seleccion.pdf`);
   }
   async function imprimirIds(tipo, ids, nombre){
+    if(_depActual && !confirm(`⚠️ Estás viendo el depósito:\n${_depActual}\n\nVas a imprimir ${ids.length} etiqueta(s) que NO son de Arévalo Soriano. ¿Seguro?`)) return;
     const st = document.getElementById('status-'+tipo);
     st.className='status'; st.textContent=`Generando ${ids.length} etiqueta(s)…`;
     try{
