@@ -551,7 +551,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v44</span></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v45</span></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1204,9 +1204,10 @@
     const st = document.getElementById('status-'+tipo);
     st.className='status'; st.textContent=`Generando ${ids.length} etiqueta(s)…`;
     try{
-      const {unidas,fallidas} = await bajarPdf(`${API}/api/despacho/etiquetas-seleccion?ids=${ids.join(',')}`, nombre);
-      st.className='status ok';
-      st.textContent = `${unidas||ids.length} etiqueta(s) generadas`+(fallidas&&fallidas!=='0'?` · ${fallidas} fallaron`:'')+'. Pasaron a “en preparación”.';
+      const {unidas,fallidas,motivo} = await bajarPdf(`${API}/api/despacho/etiquetas-seleccion?ids=${ids.join(',')}`, nombre);
+      const hayFallas = fallidas && fallidas!=='0';
+      st.className = hayFallas ? 'status err' : 'status ok';
+      st.textContent = `${unidas||ids.length} etiqueta(s) generadas`+(hayFallas?` · ${fallidas} fallaron${motivo?' — '+motivo:''}`:'')+'. Pasaron a “en preparación”.';
       setTimeout(()=>{ cargarPanel(); cargarImpresas(); }, 1200);
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
@@ -1217,10 +1218,11 @@
     if(!r.ok){ let msg="No se pudo generar el PDF"; try{ const e=await r.json(); msg=e.error||msg; }catch(_){}
       throw new Error(msg); }
     const unidas=r.headers.get("X-Etiquetas-Unidas"), fallidas=r.headers.get("X-Etiquetas-Fallidas");
+    let motivo=""; try{ const m=r.headers.get("X-Etiquetas-Motivo"); if(m) motivo=decodeURIComponent(m); }catch(_){}
     const blob=await r.blob(), u=URL.createObjectURL(blob), a=document.createElement("a");
     a.href=u; a.download=defaultName; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),4000);
-    return { unidas, fallidas };
+    return { unidas, fallidas, motivo };
   }
   async function cargarImpresas(){
     const st=document.getElementById("status-reprint");
