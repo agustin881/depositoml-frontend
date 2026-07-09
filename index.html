@@ -574,7 +574,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v50</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v51</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1177,7 +1177,10 @@
           </div>
           <button class="btn-light" onclick="guardarAliasDep('${esc(x.ml_address_id)}')">Guardar</button>
         </div>`).join('');
-      if(d.filtro_texto_activo) st.innerHTML = `<span class="dep-warn">⚠️ Todavía no hay principal marcado: la app sigue filtrando por texto "${esc(d.filtro_texto_activo)}". Marcá el principal para pasar al filtro por ID exacto.</span>`;
+      let notas = [];
+      if(d.origen === 'envios') notas.push('ℹ️ ML bloquea la consulta directa de direcciones, así que los depósitos se cosecharon de tus ventas de los últimos días (están todos los que tuvieron movimiento).');
+      if(d.filtro_texto_activo) notas.push(`<span class="dep-warn">⚠️ Todavía no hay principal marcado: la app sigue filtrando por texto "${esc(d.filtro_texto_activo)}". Marcá el principal para pasar al filtro por ID exacto.</span>`);
+      if(notas.length) st.innerHTML = notas.join('<br>');
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
     finally{ if(btn) btn.disabled = false; }
   }
