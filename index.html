@@ -86,6 +86,15 @@
   .dep-info .dep-warn{color:var(--colecta-d); font-weight:700}
   .dep-selector{margin-left:10px; padding:5px 8px; border:1px solid var(--line2); border-radius:8px; font-size:12.5px; font-family:inherit; font-weight:600; background:var(--surface); color:var(--ink); max-width:230px; cursor:pointer}
   .dep-selector.otro{background:#FFF3E4; border-color:var(--colecta); color:var(--colecta-d)}
+  .depcfg-row{display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line2); border-radius:10px; margin-bottom:8px}
+  .depcfg-row.principal{border-color:#9BE3BC; background:#F0FBF4}
+  .depcfg-radio{display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10.5px; font-weight:700; color:var(--muted2); cursor:pointer; min-width:52px}
+  .depcfg-radio input{width:17px; height:17px; cursor:pointer}
+  .depcfg-info{flex:1; min-width:0}
+  .depcfg-alias{width:100%; max-width:340px; padding:8px 10px; border:1px solid var(--line2); border-radius:8px; font-size:14px; font-weight:600; font-family:inherit; color:var(--ink)}
+  .depcfg-dir{font-size:12px; color:var(--muted2); margin-top:4px}
+  .depcfg-id{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--muted); background:var(--bg); padding:1px 6px; border-radius:6px; margin-left:4px}
+  @media(max-width:640px){ .depcfg-row{flex-wrap:wrap} }
   @media(max-width:640px){ .dep-selector{max-width:140px; font-size:11.5px} }
   .otrodep-row{display:flex; gap:8px; margin:10px 0}
   .otrodep-row select{flex:1; max-width:420px; padding:10px 12px; border:1px solid var(--line2); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--ink)}
@@ -565,7 +574,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v49</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v50</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -838,6 +847,16 @@
     <section id="view-config" class="view">
       <div class="card-box">
         <div class="seg-head">
+          <h2>🏭 Depósitos</h2>
+          <button class="btn-light" onclick="pescarDepositosML()" id="btn-pescar-dep">↓ Traer de Mercado Libre</button>
+        </div>
+        <p class="hint">Traé todos tus depósitos de ML y ponele a cada uno <b>tu nombre</b> (Arévalo Soriano, FLEX BAIRES…). Marcá cuál es el <b>principal</b>: la app imprime por defecto solo lo de ese depósito, usando su ID exacto (aunque tengas dos en la misma ciudad). Los demás quedan disponibles en el selector de arriba.</p>
+        <div class="status" id="dep-cfg-status"></div>
+        <div id="dep-cfg-lista"><div class="status">Tocá "Traer de Mercado Libre" para pescar tus depósitos.</div></div>
+      </div>
+
+      <div class="card-box">
+        <div class="seg-head">
           <h2>🚚 Camiones de la colecta</h2>
           <button class="btn-light" onclick="cargarConfigCamiones()">↻</button>
         </div>
@@ -1056,7 +1075,7 @@
       const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
     }
-    if(name === 'config') cargarConfigCamiones();
+    if(name === 'config'){ cargarConfigCamiones(); pescarDepositosML(false); }
     if(name === 'despachar' && typeof efRefreshEnvios === 'function') efRefreshEnvios();
     if(name !== 'despachar' && typeof efStopCam === 'function') efStopCam();
     window.scrollTo(0, 0);
@@ -1126,19 +1145,73 @@
         const otros = deps.filter(x=>x.excluidos>0);
         const actual = sel.value;
         sel.innerHTML = '<option value="">📍 Arévalo Soriano</option>' +
-          otros.map(x=>`<option value="${esc(x.deposito)}">${esc(x.deposito)} (${x.excluidos})</option>`).join('');
+          otros.map(x=>`<option value="${esc(x.id||x.deposito)}">${esc(x.deposito)} (${x.excluidos})</option>`).join('');
         sel.value = actual || '';
         sel.classList.toggle('otro', !!sel.value);
       }
     }catch(e){ /* informativo: si falla no molesta */ }
   }
 
+  // ── Config → Depósitos: pescar de ML, alias y principal ──
+  async function pescarDepositosML(traer){
+    const st = document.getElementById('dep-cfg-status'), lista = document.getElementById('dep-cfg-lista');
+    const btn = document.getElementById('btn-pescar-dep');
+    st.className='status'; st.textContent = traer===false ? 'Cargando…' : 'Consultando tus direcciones en Mercado Libre…';
+    if(btn) btn.disabled = true;
+    try{
+      const r = await authFetch(`${API}/api/despacho/depositos-ml${traer===false?'':'?traer=1'}`);
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'error');
+      st.textContent='';
+      const deps = d.depositos||[];
+      if(!deps.length){ lista.innerHTML = '<div class="status">ML no devolvió direcciones. Probá de nuevo.</div>'; return; }
+      lista.innerHTML = deps.map(x=>`
+        <div class="depcfg-row${x.es_principal?' principal':''}">
+          <label class="depcfg-radio" title="Marcar como depósito principal">
+            <input type="radio" name="dep-ppal" ${x.es_principal?'checked':''} onchange="marcarPrincipalDep('${esc(x.ml_address_id)}')">
+            <span>Principal</span>
+          </label>
+          <div class="depcfg-info">
+            <input class="depcfg-alias" id="alias-${esc(x.ml_address_id)}" value="${esc(x.alias||'')}" placeholder="Ponele tu nombre (ej. Arévalo Soriano)" maxlength="40">
+            <div class="depcfg-dir">${esc(x.direccion||'—')} <span class="depcfg-id">ID ${esc(x.ml_address_id)}</span></div>
+          </div>
+          <button class="btn-light" onclick="guardarAliasDep('${esc(x.ml_address_id)}')">Guardar</button>
+        </div>`).join('');
+      if(d.filtro_texto_activo) st.innerHTML = `<span class="dep-warn">⚠️ Todavía no hay principal marcado: la app sigue filtrando por texto "${esc(d.filtro_texto_activo)}". Marcá el principal para pasar al filtro por ID exacto.</span>`;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+    finally{ if(btn) btn.disabled = false; }
+  }
+
+  async function guardarAliasDep(id){
+    const st = document.getElementById('dep-cfg-status');
+    const alias = (document.getElementById('alias-'+id).value||'').trim();
+    try{
+      const r = await authFetch(`${API}/api/despacho/depositos-ml/alias`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ml_address_id: id, alias }) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent = alias ? `Guardado: "${alias}".` : 'Alias borrado.';
+      cargarDepositos();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function marcarPrincipalDep(id){
+    const st = document.getElementById('dep-cfg-status');
+    st.className='status'; st.textContent='Marcando principal…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/depositos-ml/principal`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ml_address_id: id }) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent='✓ Principal actualizado. La app imprime por defecto solo lo de este depósito (filtro por ID exacto).';
+      pescarDepositosML(false); cargarDepositos(); cargarPanel(true);
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
   // ── Selector de depósito (topbar): cambia qué etiquetas muestra el panel ──
-  let _depActual = ''; // '' = Arévalo Soriano (nuestro)
+  let _depActual = ''; // '' = principal (Arévalo Soriano); si no, ID o dirección del depósito elegido
+  let _depActualNombre = '';
 
   function cambiarDeposito(){
     const sel = document.getElementById('dep-selector');
     _depActual = sel.value || '';
+    _depActualNombre = _depActual ? (sel.selectedOptions[0] ? sel.selectedOptions[0].text.replace(/\s*\(\d+\)\s*$/,'') : _depActual) : '';
     sel.classList.toggle('otro', !!_depActual);
     if(_depActual) leerPanelOtroDep();
     else leerPanel();
@@ -1146,7 +1219,7 @@
 
   async function leerPanelOtroDep(){
     const est = document.getElementById('vivo-estado');
-    est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>Cargando etiquetas de ${esc(_depActual)}…`;
+    est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>Cargando etiquetas de ${esc(_depActualNombre||_depActual)}…`;
     try{
       const [rf, rc] = await Promise.all([
         authFetch(`${API}/api/despacho/pendientes?tipo=flex&deposito=${encodeURIComponent(_depActual)}`),
@@ -1161,8 +1234,8 @@
       ];
       _panelData.flex = mapear(df); _panelData.colecta = mapear(dc);
       pintarTanda('flex'); pintarTanda('colecta');
-      est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>📍 Viendo depósito: <b>&nbsp;${esc(_depActual)}</b>&nbsp;· datos en vivo de ML (no es Arévalo Soriano)`;
-    }catch(e){ est.innerHTML = `<span class="vivo-dot" style="background:var(--err)"></span>Error consultando ${esc(_depActual)}: ${esc(e.message)}`; }
+      est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>📍 Viendo depósito: <b>&nbsp;${esc(_depActualNombre||_depActual)}</b>&nbsp;· datos en vivo de ML (no es Arévalo Soriano)`;
+    }catch(e){ est.innerHTML = `<span class="vivo-dot" style="background:var(--err)"></span>Error consultando ${esc(_depActualNombre||_depActual)}: ${esc(e.message)}`; }
   }
   let _panelTimer = null;
 
@@ -1277,7 +1350,7 @@
     await imprimirIds(tipo, ids, `etiquetas_${tipo}_seleccion.pdf`);
   }
   async function imprimirIds(tipo, ids, nombre){
-    if(_depActual && !confirm(`⚠️ Estás viendo el depósito:\n${_depActual}\n\nVas a imprimir ${ids.length} etiqueta(s) que NO son de Arévalo Soriano. ¿Seguro?`)) return;
+    if(_depActual && !confirm(`⚠️ Estás viendo el depósito:\n${_depActualNombre||_depActual}\n\nVas a imprimir ${ids.length} etiqueta(s) que NO son de Arévalo Soriano. ¿Seguro?`)) return;
     const st = document.getElementById('status-'+tipo);
     st.className='status'; st.textContent=`Generando ${ids.length} etiqueta(s)…`;
     try{
