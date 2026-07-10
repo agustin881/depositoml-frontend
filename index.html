@@ -457,6 +457,9 @@
   .faltan-det{margin-top:6px}
   .faltan-sum{cursor:pointer; list-style:none; color:var(--err); display:flex; align-items:center; gap:6px;
     background:#FDECEC; border:1px solid #F3B1B6; border-radius:10px; padding:9px 12px; font-size:12px; letter-spacing:0; text-transform:none}
+  .prog-det{margin-top:10px}
+  .prog-sum{color:var(--flex-d); background:#EAF2FF; border:1px solid #C7DBF7; border-radius:10px; padding:10px 12px; cursor:pointer; font-size:13.5px}
+  .prog-pill{background:#EAF2FF; color:var(--flex-d); border:1px solid #C7DBF7; font-family:'JetBrains Mono',monospace; font-size:10.5px}
   .faltan-sum::-webkit-details-marker{display:none}
   .faltan-det[open] .faltan-sum{border-bottom-left-radius:0; border-bottom-right-radius:0}
   .panel, .card-box, .dcard, .buscar-wrap, .seg-card, .seg-sec, .rcard, .placeholder{
@@ -574,7 +577,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v51</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v52</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1824,6 +1827,15 @@
           <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span></span>
           <span class="venta">${esc(s.nro_venta)||""}</span>
           <button class="mini" onclick="reimprimirUno('${esc(s.shipment_id)}')">Reimprimir</button></div>`;
+        html+=`</div></details>`;
+      }
+      if(d.programadas && d.programadas.length){
+        const fmtF = f => f ? new Date(f+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}) : 'otro día';
+        html+=`<details class="prog-det"><summary class="group-h prog-sum">📅 Programadas para otro día · ${d.programadas.length} — no cuentan para hoy</summary><div class="list">`;
+        for(const s of d.programadas) html+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span></span>
+          <span class="venta">${esc(s.nro_venta)||""}</span>
+          <span class="pill prog-pill">colecta ${fmtF(s.fecha_programada)}</span></div>`;
         html+=`</div></details>`;
       }
       document.getElementById('list-faltan').innerHTML=html;
