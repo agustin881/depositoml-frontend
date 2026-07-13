@@ -577,7 +577,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v52</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v53</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1137,8 +1137,8 @@
       const deps = d.depositos || [];
       const incluidos = deps.filter(x=>x.incluidos>0);
       const excluidos = deps.filter(x=>x.excluidos>0);
-      let html = `📍 Imprimiendo solo el depósito que coincide con <b>${esc(d.filtro)}</b>`;
-      if(incluidos.length) html += `: ${incluidos.map(x=>`${esc(x.deposito)} (${x.incluidos})`).join(' · ')}`;
+      let html = `📍 Imprimiendo solo: <b>${esc(d.filtro)}</b>`;
+      if(incluidos.length) html += ` → ${incluidos.map(x=>`${x.es_principal?'⭐ ':''}${esc(x.deposito)} (${x.incluidos})`).join(' · ')}`;
       if(excluidos.length) html += ` — <span class="dep-warn">quedan afuera ${excluidos.reduce((a,x)=>a+x.excluidos,0)} envío(s) de: ${excluidos.map(x=>`${esc(x.deposito)} (${x.excluidos})`).join(' · ')}</span>`;
       if(!deps.length) html += ` (todavía sin datos — actualizá el panel)`;
       el.innerHTML = html; el.style.display = 'block';
