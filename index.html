@@ -577,7 +577,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v53</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v54</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -2520,11 +2520,36 @@
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
+  // ---------- SSO con Pontec OS: si estamos embebidos en el hub, pedirle la sesión ----------
+  async function intentarSSO(){
+    if (window.parent === window || !sb) return false;   // no estamos en un iframe
+    // Solo aceptamos la respuesta del origen que nos embebió (el hub)
+    let origenPadre = null;
+    try { origenPadre = new URL(document.referrer).origin; } catch(e){}
+    return new Promise(resolver => {
+      let listo = false;
+      const oyente = async (ev) => {
+        const d = ev.data || {};
+        if (listo || d.tipo !== 'pontecos-sesion' || !d.access_token) return;
+        if (origenPadre && ev.origin !== origenPadre) return;
+        listo = true; window.removeEventListener('message', oyente);
+        try {
+          const { error } = await sb.auth.setSession({ access_token: d.access_token, refresh_token: d.refresh_token });
+          resolver(!error);
+        } catch(e){ resolver(false); }
+      };
+      window.addEventListener('message', oyente);
+      try { window.parent.postMessage({ tipo: 'pontecos-pedir-sesion' }, '*'); } catch(e){}
+      setTimeout(() => { if(!listo){ window.removeEventListener('message', oyente); resolver(false); } }, 2500);
+    });
+  }
+
   // ---------- Init: ¿hay sesión activa? ----------
   (async function(){
     document.getElementById('pass').addEventListener('keydown', e => { if(e.key==='Enter') entrar(); });
     if(!configurado){ document.getElementById('login-cfg').style.display='block'; return; }
-    const t = await token();
+    let t = await token();
+    if(!t && await intentarSSO()) t = await token();   // sin sesión propia → probamos el SSO del hub
     if(t) mostrarApp(); else mostrarLogin();
   })();
 </script>
