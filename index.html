@@ -95,6 +95,27 @@
   .depcfg-dir{font-size:12px; color:var(--muted2); margin-top:4px}
   .depcfg-id{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--muted); background:var(--bg); padding:1px 6px; border-radius:6px; margin-left:4px}
   @media(max-width:640px){ .depcfg-row{flex-wrap:wrap} }
+  .tr-card{border:1px solid var(--line2); border-radius:12px; padding:14px; margin-bottom:14px}
+  .tr-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+  .tr-nombre{font-weight:800; font-size:17px; color:var(--ink)}
+  .tr-tarifa{font-size:13px; color:var(--muted2); display:flex; align-items:center; gap:6px}
+  .tr-tarifa input{width:90px; padding:7px 9px; border:1px solid var(--line2); border-radius:8px; font-size:14px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--ink)}
+  .tr-periodo{margin-top:10px; font-size:13px; color:var(--muted2); display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+  .tr-periodo input[type=date]{padding:6px 8px; border:1px solid var(--line2); border-radius:8px; font-size:13px; font-family:inherit; color:var(--ink)}
+  .tr-uc{font-size:11.5px; color:var(--muted); background:var(--bg); padding:3px 8px; border-radius:999px}
+  .tr-nums{display:flex; gap:12px; margin:12px 0}
+  .tr-num{background:var(--bg); border-radius:10px; padding:10px 18px; text-align:center}
+  .tr-num b{display:block; font-size:24px; font-family:'JetBrains Mono',monospace; color:var(--ink); line-height:1.1}
+  .tr-num span{font-size:11px; color:var(--muted2)}
+  .tr-num.tr-total{background:#E9F9F0} .tr-num.tr-total b{color:var(--ok)}
+  .tr-det{margin:8px 0} .tr-det summary{cursor:pointer; font-size:13px; color:var(--flex-d); font-weight:600}
+  .tr-tabla{width:100%; max-width:420px; border-collapse:collapse; margin-top:8px; font-size:13px}
+  .tr-tabla th{ text-align:left; color:var(--muted2); font-size:11px; padding:5px 8px; border-bottom:1px solid var(--line)}
+  .tr-tabla td{padding:5px 8px; border-bottom:1px solid var(--line); color:var(--ink2)}
+  .tr-tabla.tr-hist{max-width:100%}
+  .tr-cierre-row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
+  .tr-cierre-row input{flex:1; min-width:160px; padding:9px 10px; border:1px solid var(--line2); border-radius:8px; font-size:13px; font-family:inherit}
+  .tr-pagar{background:var(--ok); white-space:nowrap} .tr-pagar:disabled{opacity:.5}
   @media(max-width:640px){ .dep-selector{max-width:140px; font-size:11.5px} }
   .otrodep-row{display:flex; gap:8px; margin:10px 0}
   .otrodep-row select{flex:1; max-width:420px; padding:10px 12px; border:1px solid var(--line2); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--ink)}
@@ -577,7 +598,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v54</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v55</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -587,6 +608,7 @@
       <button class="tab" data-tab="despachar" onclick="verTab('despachar')">Despachar <span class="badge badge-despachar" style="display:none">0</span></button>
       <button class="tab" data-tab="seguimiento" onclick="verTab('seguimiento')">Seguimiento</button>
       <button class="tab" data-tab="full" onclick="verTab('full')">Envíos Full</button>
+      <button class="tab" data-tab="transportes" onclick="verTab('transportes')">Transportes</button>
       <button class="tab tab-config" data-tab="config" onclick="verTab('config')">⚙</button>
     </nav>
   </header>
@@ -847,6 +869,22 @@
       </div>
     </section>
 
+    <section id="view-transportes" class="view">
+      <div class="card-box">
+        <div class="seg-head">
+          <h2>🚚 Transportes Flex · pagos</h2>
+          <button class="btn-light" onclick="cargarTransportes()">↻ Actualizar</button>
+        </div>
+        <p class="hint">Cuántos envíos llevó cada transporte desde el último pago, a la tarifa que definas. Compará el desglose por día con la factura que te pasen y, si cierra, tocá <b>Cerrar período y marcar PAGADO</b>. El próximo período arranca solo al día siguiente.</p>
+        <div class="status" id="tr-status"></div>
+        <div id="tr-lista"><div class="status">Cargando…</div></div>
+      </div>
+      <div class="card-box">
+        <h2>🧾 Historial de pagos</h2>
+        <div id="tr-cierres"><div class="status">—</div></div>
+      </div>
+    </section>
+
     <section id="view-config" class="view">
       <div class="card-box">
         <div class="seg-head">
@@ -923,6 +961,10 @@
     <button class="navbtn" data-tab="full" onclick="verTab('full')">
       <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
       Full
+    </button>
+    <button class="navbtn" data-tab="transportes" onclick="verTab('transportes')">
+      <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Transp.
     </button>
   </nav>
 </div>
@@ -1074,6 +1116,7 @@
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
     }
     if(name === 'imprimir') cargarSeparables();
+    if(name === 'transportes') cargarTransportes();
     if(name === 'seguimiento'){
       const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
@@ -1153,6 +1196,126 @@
         sel.classList.toggle('otro', !!sel.value);
       }
     }catch(e){ /* informativo: si falla no molesta */ }
+  }
+
+  // ── Transportes Flex: envíos por transportista, tarifa y cierres de pago ──
+  const $AR = n => '$ ' + Number(n||0).toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+  const fFecha = f => f ? new Date(f+'T12:00:00').toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '—';
+  let _trData = [];
+
+  async function cargarTransportes(desdeOverride, transpOverride){
+    const st = document.getElementById('tr-status'), cont = document.getElementById('tr-lista');
+    if(!cont) return;
+    try{
+      let url = `${API}/api/despacho/transportes/resumen`;
+      const q = [];
+      if(transpOverride){ q.push('transportista='+encodeURIComponent(transpOverride)); if(desdeOverride) q.push('desde='+desdeOverride); }
+      const h = document.getElementById('tr-hasta-'+cssId(transpOverride||''));
+      if(transpOverride && h && h.value) q.push('hasta='+h.value);
+      if(q.length) url += '?'+q.join('&');
+      const r = await authFetch(url); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'error');
+      if(transpOverride){
+        const nuevo = (d.transportistas||[])[0];
+        if(nuevo){ const i = _trData.findIndex(x=>x.transportista===nuevo.transportista); if(i>-1) _trData[i]=nuevo; }
+      } else _trData = d.transportistas||[];
+      pintarTransportes();
+      st.textContent='';
+      cargarCierres();
+    }catch(e){ if(st){ st.className='status err'; st.textContent='Error: '+esc(e.message); } }
+  }
+
+  function cssId(s){ return String(s).replace(/[^a-zA-Z0-9]/g,'_'); }
+
+  function pintarTransportes(){
+    const cont = document.getElementById('tr-lista');
+    if(!_trData.length){ cont.innerHTML = '<div class="status">No hay transportistas Flex con despachos todavía.</div>'; return; }
+    cont.innerHTML = _trData.map(t=>{
+      const id = cssId(t.transportista);
+      const dias = (t.por_dia||[]).map(x=>`<tr><td>${fFecha(x.dia)}</td><td>${x.envios}</td></tr>`).join('');
+      return `<div class="tr-card">
+        <div class="tr-head">
+          <span class="tr-nombre">🚚 ${esc(t.transportista)}</span>
+          <span class="tr-tarifa">$ <input type="number" min="0" step="0.01" id="tr-tarifa-${id}" value="${t.tarifa||''}" placeholder="0"> por envío
+            <button class="btn-light" onclick="guardarTarifaTr('${esc(t.transportista)}')">Guardar</button></span>
+        </div>
+        <div class="tr-periodo">
+          Período: <input type="date" id="tr-desde-${id}" value="${esc(t.desde||'')}"> →
+          <input type="date" id="tr-hasta-${id}" value="${esc(t.hasta||'')}">
+          <button class="btn-light" onclick="recalcTr('${esc(t.transportista)}')">Recalcular</button>
+          ${t.ultimo_cierre_hasta ? `<span class="tr-uc">último pago hasta ${fFecha(t.ultimo_cierre_hasta)}</span>` : '<span class="tr-uc">sin pagos registrados</span>'}
+        </div>
+        <div class="tr-nums">
+          <div class="tr-num"><b>${t.envios}</b><span>envíos</span></div>
+          <div class="tr-num tr-total"><b>${$AR(t.envios * (t.tarifa||0))}</b><span>a pagar</span></div>
+        </div>
+        ${(t.por_dia||[]).length ? `<details class="tr-det"><summary>Desglose por día (para cruzar con la factura)</summary>
+          <table class="tr-tabla"><thead><tr><th>Día</th><th>Envíos</th></tr></thead><tbody>${dias}</tbody></table></details>` : ''}
+        <div class="tr-cierre-row">
+          <input id="tr-fact-${id}" placeholder="N° de factura del transporte (opcional)" maxlength="40">
+          <input id="tr-notas-${id}" placeholder="Notas (opcional)" maxlength="120">
+          <button class="btn-scan tr-pagar" onclick="cerrarTr('${esc(t.transportista)}')" ${t.envios? '':'disabled'}>✓ Cerrar período y marcar PAGADO</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function guardarTarifaTr(nombre){
+    const st = document.getElementById('tr-status');
+    const v = Number(document.getElementById('tr-tarifa-'+cssId(nombre)).value);
+    if(!isFinite(v) || v<0){ st.className='status err'; st.textContent='Tarifa inválida.'; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/transportes/tarifa`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({transportista:nombre, tarifa:v})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      const t = _trData.find(x=>x.transportista===nombre); if(t) t.tarifa = v;
+      pintarTransportes();
+      st.className='status ok'; st.textContent=`Tarifa de ${nombre}: ${$AR(v)} por envío.`;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  function recalcTr(nombre){
+    const desde = document.getElementById('tr-desde-'+cssId(nombre)).value;
+    cargarTransportes(desde, nombre);
+  }
+
+  async function cerrarTr(nombre){
+    const id = cssId(nombre), st = document.getElementById('tr-status');
+    const t = _trData.find(x=>x.transportista===nombre); if(!t) return;
+    const desde = document.getElementById('tr-desde-'+id).value, hasta = document.getElementById('tr-hasta-'+id).value;
+    const tarifa = Number(document.getElementById('tr-tarifa-'+id).value)||0;
+    if(!confirm(`Vas a marcar PAGADO a ${nombre}:\n\nPeríodo: ${fFecha(desde)} → ${fFecha(hasta)}\nEnvíos: ${t.envios}\nTarifa: ${$AR(tarifa)} por envío\nTOTAL: ${$AR(t.envios*tarifa)}\n\n¿Confirmás? (el próximo período arranca al día siguiente)`)) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/transportes/cerrar`, {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({transportista:nombre, desde, hasta, tarifa,
+          factura: document.getElementById('tr-fact-'+id).value, notas: document.getElementById('tr-notas-'+id).value})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok';
+      st.textContent = `✓ Pagado: ${nombre} · ${d.cierre.envios} envíos · ${$AR(d.cierre.total)}${d.cierre.factura ? ' · fact. '+d.cierre.factura : ''}.`;
+      cargarTransportes();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function cargarCierres(){
+    const cont = document.getElementById('tr-cierres'); if(!cont) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/transportes/cierres`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'');
+      if(!(d.cierres||[]).length){ cont.innerHTML='<div class="status">Todavía no hay pagos registrados.</div>'; return; }
+      cont.innerHTML = `<table class="tr-tabla tr-hist"><thead><tr><th>Pagado</th><th>Transporte</th><th>Período</th><th>Envíos</th><th>Tarifa</th><th>Total</th><th>Factura</th><th></th></tr></thead><tbody>` +
+        d.cierres.map(c=>`<tr><td>${fFecha(String(c.pagado_at).substring(0,10))}</td><td><b>${esc(c.transportista)}</b></td>
+          <td>${fFecha(c.desde)} → ${fFecha(c.hasta)}</td><td>${c.envios}</td><td>${$AR(c.tarifa)}</td><td><b>${$AR(c.total)}</b></td>
+          <td>${esc(c.factura||'—')}</td>
+          <td><button class="mini del" onclick="borrarCierreTr(${c.id})">Deshacer</button></td></tr>`).join('') + '</tbody></table>';
+    }catch(e){ cont.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  async function borrarCierreTr(id){
+    if(!confirm('¿Deshacer este pago? Los envíos vuelven a quedar pendientes de cierre.')) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/transportes/cierres/borrar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      cargarTransportes();
+    }catch(e){ alert('Error: '+e.message); }
   }
 
   // ── Config → Depósitos: pescar de ML, alias y principal ──
