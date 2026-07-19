@@ -116,6 +116,17 @@
   .tr-cierre-row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
   .tr-cierre-row input{flex:1; min-width:160px; padding:9px 10px; border:1px solid var(--line2); border-radius:8px; font-size:13px; font-family:inherit}
   .tr-pagar{background:var(--ok); white-space:nowrap} .tr-pagar:disabled{opacity:.5}
+  .verif-switch{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; cursor:pointer; color:var(--muted2)}
+  .verif-switch input{width:20px; height:20px; cursor:pointer}
+  .verif-switch .on{color:var(--ok)}
+  .verif-imp{margin:10px 0} .verif-imp summary{cursor:pointer; font-size:13.5px; font-weight:600; color:var(--flex-d)}
+  .verif-imp textarea{width:100%; min-height:110px; margin:8px 0; padding:10px; border:1px solid var(--line2); border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:12px; resize:vertical}
+  .verif-add{display:flex; gap:8px; align-items:center; margin:10px 0; flex-wrap:wrap}
+  .verif-add input[type=text], .verif-add input:not([type]){padding:9px 10px; border:1px solid var(--line2); border-radius:8px; font-size:13.5px; font-family:inherit}
+  .verif-add #vp-sku{width:150px} .verif-add #vp-ean{width:190px; font-family:'JetBrains Mono',monospace} .verif-add #vp-buscar{flex:1; min-width:220px}
+  .verif-add label{font-size:12.5px; color:var(--muted2); display:flex; align-items:center; gap:5px}
+  .prod-mano{display:flex; align-items:center; gap:8px; background:#FFF7E8; border:1px solid #F3D9A4; color:#8a5a00; border-radius:10px; padding:9px 12px; font-size:13.5px; margin-bottom:8px}
+  .prod-mano b{font-family:'JetBrains Mono',monospace}
   @media(max-width:640px){ .dep-selector{max-width:140px; font-size:11.5px} }
   .otrodep-row{display:flex; gap:8px; margin:10px 0}
   .otrodep-row select{flex:1; max-width:420px; padding:10px 12px; border:1px solid var(--line2); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--ink)}
@@ -598,7 +609,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v56</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v58</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -707,6 +718,7 @@
             <div id="cam-flash" class="cam-flash"></div>
             <div class="cam-hint" id="cam-hint"></div>
           </div>
+          <div id="prod-mano" class="prod-mano" style="display:none"></div>
           <div id="scan-result"></div>
         </div>
 
@@ -894,6 +906,30 @@
         <p class="hint">Traé todos tus depósitos de ML y ponele a cada uno <b>tu nombre</b> (Arévalo Soriano, FLEX BAIRES…). Marcá cuál es el <b>principal</b>: la app imprime por defecto solo lo de ese depósito, usando su ID exacto (aunque tengas dos en la misma ciudad). Los demás quedan disponibles en el selector de arriba.</p>
         <div class="status" id="dep-cfg-status"></div>
         <div id="dep-cfg-lista"><div class="status">Tocá "Traer de Mercado Libre" para pescar tus depósitos.</div></div>
+      </div>
+
+      <div class="card-box">
+        <div class="seg-head">
+          <h2>🔍 Verificación de productos</h2>
+          <label class="verif-switch"><input type="checkbox" id="verif-on" onchange="toggleVerif()"> <span id="verif-estado">…</span></label>
+        </div>
+        <p class="hint">Con la llave <b>activada</b>, los productos que <b>requieren verificación</b> exigen escanear <b>el EAN del producto Y la etiqueta</b> para despachar — en el orden que resulte más ágil: <b>producto → etiqueta</b> (un solo movimiento, se despacha de una si coincide) o <b>etiqueta → producto</b>. Si no coinciden, se frena con alarma. Apagá la llave y todo vuelve al escaneo simple de siempre.</p>
+        <div class="status" id="verif-status"></div>
+        <details class="verif-imp"><summary>📥 Importar productos en masa (pegá desde Excel)</summary>
+          <p class="hint">Una línea por producto: <b>SKU</b> <b>EAN</b> (separados por tab, coma o punto y coma). Tercera columna opcional: <b>no</b> = no requiere verificación. Los SKU repetidos se actualizan.</p>
+          <textarea id="verif-import" placeholder="OFI210-NE&#9;7791234567890&#10;OFI210-BL&#9;7791234567891&#9;no"></textarea>
+          <button class="btn-scan" onclick="importarProductos()">Importar</button>
+        </details>
+        <div class="verif-add">
+          <input id="vp-sku" placeholder="SKU" maxlength="40">
+          <input id="vp-ean" placeholder="EAN (código de barras)" maxlength="20">
+          <label><input type="checkbox" id="vp-req" checked> Requiere</label>
+          <button class="btn-light" onclick="agregarProducto()">Agregar</button>
+        </div>
+        <div class="verif-add">
+          <input id="vp-buscar" placeholder="🔎 Buscar por SKU o EAN…" oninput="clearTimeout(window._vpT); window._vpT=setTimeout(buscarProductos, 350)">
+        </div>
+        <div id="verif-lista"><div class="status">—</div></div>
       </div>
 
       <div class="card-box">
@@ -1143,7 +1179,7 @@
       const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
     }
-    if(name === 'config'){ cargarConfigCamiones(); pescarDepositosML(false); }
+    if(name === 'config'){ cargarConfigCamiones(); pescarDepositosML(false); cargarVerif(); }
     if(name === 'despachar' && typeof efRefreshEnvios === 'function') efRefreshEnvios();
     if(name !== 'despachar' && typeof efStopCam === 'function') efStopCam();
     window.scrollTo(0, 0);
@@ -1338,6 +1374,88 @@
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
       cargarTransportes();
     }catch(e){ alert('Error: '+e.message); }
+  }
+
+  // ── Ajustes → Verificación de productos ──
+  async function cargarVerif(){
+    const st = document.getElementById('verif-status'); if(!st) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/verificacion`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'');
+      const chk = document.getElementById('verif-on'); chk.checked = !!d.on;
+      const est = document.getElementById('verif-estado');
+      est.textContent = d.on ? 'ACTIVADA' : 'desactivada';
+      est.className = d.on ? 'on' : '';
+      st.className='status'; st.textContent = `${d.total} producto(s) cargados · ${d.requieren} requieren verificación.`;
+      buscarProductos();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function toggleVerif(){
+    const chk = document.getElementById('verif-on'), st = document.getElementById('verif-status');
+    try{
+      const r = await authFetch(`${API}/api/despacho/verificacion`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({on: chk.checked})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      const est = document.getElementById('verif-estado');
+      est.textContent = d.on ? 'ACTIVADA' : 'desactivada'; est.className = d.on ? 'on' : '';
+      st.className='status ok'; st.textContent = d.on ? '✓ Verificación ACTIVADA: al despachar se pedirá el EAN de los productos que lo requieran.' : 'Verificación desactivada.';
+    }catch(e){ chk.checked = !chk.checked; st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function importarProductos(){
+    const st = document.getElementById('verif-status');
+    const texto = document.getElementById('verif-import').value;
+    if(!texto.trim()){ st.className='status err'; st.textContent='Pegá al menos una línea (SKU  EAN).'; return; }
+    st.className='status'; st.textContent='Importando…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos/importar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({texto})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      document.getElementById('verif-import').value='';
+      st.className='status ok'; st.textContent=`✓ ${d.importados} producto(s) importados${d.invalidas?` · ${d.invalidas} línea(s) inválidas`:''}.`;
+      cargarVerif();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function agregarProducto(){
+    const st = document.getElementById('verif-status');
+    const sku = document.getElementById('vp-sku').value.trim();
+    const ean = document.getElementById('vp-ean').value.trim();
+    if(!sku){ st.className='status err'; st.textContent='Poné el SKU.'; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos/uno`, {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({sku, ean, requiere: document.getElementById('vp-req').checked})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      document.getElementById('vp-sku').value=''; document.getElementById('vp-ean').value='';
+      st.className='status ok'; st.textContent=`✓ ${sku.toUpperCase()} guardado.`;
+      cargarVerif();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function buscarProductos(){
+    const cont = document.getElementById('verif-lista'); if(!cont) return;
+    const b = (document.getElementById('vp-buscar').value||'').trim();
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos${b?'?buscar='+encodeURIComponent(b):''}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      if(!(d.productos||[]).length){ cont.innerHTML='<div class="status">Sin productos'+(b?' que coincidan':'')+'. Importá o agregá arriba.</div>'; return; }
+      cont.innerHTML = `<table class="tr-tabla" style="max-width:640px"><thead><tr><th>SKU</th><th>EAN</th><th>Verifica</th><th></th></tr></thead><tbody>`+
+        d.productos.map(p=>`<tr><td><b>${esc(p.sku)}</b></td><td class="mono">${esc(p.ean||'—')}</td>
+          <td><input type="checkbox" ${p.requiere?'checked':''} onchange="reqProducto('${esc(p.sku)}', this.checked)"></td>
+          <td><button class="mini del" onclick="borrarProducto('${esc(p.sku)}')">Borrar</button></td></tr>`).join('')+'</tbody></table>'+
+        (d.productos.length>=120?'<div class="status">Mostrando los primeros 120 — usá el buscador para el resto.</div>':'');
+    }catch(e){ cont.innerHTML='<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  async function reqProducto(sku, requiere){
+    try{ await authFetch(`${API}/api/despacho/productos/requiere`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sku, requiere})}); }catch(e){}
+  }
+
+  async function borrarProducto(sku){
+    if(!confirm('¿Borrar '+sku+' del catálogo de verificación?')) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos/borrar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sku})});
+      if(r.ok){ cargarVerif(); }
+    }catch(e){}
   }
 
   // ── Config → Depósitos: pescar de ML, alias y principal ──
@@ -1901,12 +2019,53 @@
     return [...new Set(nums)];
   }
 
+  let _verifPend = null;   // {codigo, ean, sku, titulo, nro_venta} → esperando el EAN del producto
+  let _verifOk = null;     // código de etiqueta ya verificado (se manda con verificado:true)
+  let _prodMano = null;    // {sku, ean, t} → producto escaneado ANTES que la etiqueta (expira a los 90s)
+
+  function pintarProdMano(){
+    const el = document.getElementById('prod-mano'); if(!el) return;
+    if(_prodMano && Date.now()-_prodMano.t < 90000){
+      el.style.display='flex';
+      el.innerHTML = `📦 En mano: <b>${esc(_prodMano.sku)}</b> — escaneá la etiqueta del paquete
+        <button class="mini" onclick="soltarProdMano()">✕ soltar</button>`;
+    } else { _prodMano=null; el.style.display='none'; el.innerHTML=''; }
+  }
+  function soltarProdMano(){ _prodMano=null; pintarProdMano(); reenfocar(); }
+
+  function cancelarVerif(){
+    _verifPend = null;
+    const out = document.getElementById('scan-result');
+    if(out) out.innerHTML = '<div class="status">Verificación cancelada. El paquete NO quedó despachado.</div>';
+    reenfocar();
+  }
+
   async function escanear(valor){
     const input=document.getElementById('scan-input');
     const codigo=(valor!=null ? String(valor) : (input.value||'')).trim();
     if(!codigo) return;
     const out=document.getElementById('scan-result');
     const btn=document.getElementById('btn-scan');
+
+    // ¿Estamos esperando el EAN de un producto? → este escaneo es el producto, no una etiqueta
+    if(_verifPend){
+      const leido = codigo.replace(/\D/g,'');
+      const esperado = String(_verifPend.ean||'').replace(/\D/g,'');
+      const coincide = (esperado && leido && leido === esperado) || (codigo.trim().toUpperCase() === String(_verifPend.sku||'').toUpperCase());
+      input.value='';
+      if(coincide){
+        const orig = _verifPend.codigo; _verifOk = orig; _verifPend = null;
+        out.innerHTML = '<div class="status ok">✓ Producto correcto — registrando el despacho…</div>';
+        return escanear(orig);
+      }
+      beep(true); flashCam('err'); mostrarFS('err','⛔ PRODUCTO EQUIVOCADO', `No es ${esc(_verifPend.sku)||'el producto esperado'}`);
+      out.innerHTML = `<div class="scan-card scan-cancel"><div class="big">⛔ Producto equivocado</div>
+        <div class="det">Escaneaste <span class="mono">${esc(codigo).slice(0,30)}</span> y el producto esperado es
+        <b>${esc(_verifPend.sku)||'—'}</b>${_verifPend.ean?` (EAN <span class="mono">${esc(_verifPend.ean)}</span>)`:''}.<br>
+        Buscá el producto correcto y escaneá su código, o <button class="mini" onclick="cancelarVerif()">cancelá</button>.</div></div>`;
+      reenfocar();
+      return;
+    }
 
     // MODO TEST: solo mostrar lo que leyó, sin despachar
     if(document.getElementById('modo-test') && document.getElementById('modo-test').checked){
@@ -1952,9 +2111,43 @@
     out.innerHTML=`<div class="status">Chequeando la venta en Mercado Libre…</div>`;
     try{
       const r=await authFetch(`${API}/api/despacho/despachar`,{
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo, destino_id:_destinoActivo})});
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo, destino_id:_destinoActivo, verificado: _verifOk===codigo,
+          producto_ean: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.ean : null,
+          producto_sku: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.sku : null})});
+      const _usoMano = !!(_prodMano && Date.now()-_prodMano.t<90000);
+      if(_verifOk===codigo) _verifOk=null;
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo verificar');
+      if(d.resultado==='producto'){
+        _prodMano = { sku: d.sku, ean: d.ean||null, t: Date.now() };
+        pintarProdMano();
+        beep(false); flashCam('warn'); mostrarFS('warn','📦 Producto en mano', esc(d.sku));
+        out.innerHTML = `<div class="scan-card scan-warn"><div class="big">📦 Producto en mano: ${esc(d.sku)}</div>
+          <div class="det">Ahora escaneá la <b>etiqueta del paquete</b> y se despacha de una si coincide.</div></div>`;
+        input.value=''; btn.disabled=false; reenfocar();
+        return;
+      }
+      if(d.resultado==='producto_distinto'){
+        beep(true); flashCam('err'); mostrarFS('err','⛔ NO CORRESPONDE', `La etiqueta es de ${esc(d.esperado_sku)||'otro producto'}`);
+        out.innerHTML = `<div class="scan-card scan-cancel"><div class="big">⛔ Producto ≠ etiqueta</div>
+          <div class="det">Tenés en mano <b>${esc(d.en_mano_sku)||'un producto'}</b> pero esta etiqueta es de
+          <b>${esc(d.esperado_sku)||'—'}</b> · ${esc(d.titulo)||''}<br>
+          Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br>
+          Buscá el paquete correcto para este producto, o <button class="mini" onclick="soltarProdMano()">soltá el producto</button>.</div></div>`;
+        input.value=''; btn.disabled=false; reenfocar();
+        return;
+      }
+      if(d.resultado==='verificar'){
+        _verifPend = { codigo, ean: d.ean||null, sku: d.sku||'', titulo: d.titulo||'', nro_venta: d.nro_venta||'' };
+        beep(false); flashCam('warn'); mostrarFS('warn','🔍 VERIFICÁ EL PRODUCTO', esc(d.sku)||'Escaneá el EAN');
+        out.innerHTML = `<div class="scan-card scan-warn"><div class="big">🔍 Verificá el producto</div>
+          <div class="det">Etiqueta OK de <b>${esc(d.sku)||'—'}</b> · ${esc(d.titulo)||''}<br>
+          Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br><br>
+          <b>Ahora escaneá el código de barras DEL PRODUCTO</b>${d.ean?` (EAN <span class="mono">${esc(d.ean)}</span>)`:' (o tipeá el SKU)'} para confirmarlo.<br>
+          <button class="mini" onclick="cancelarVerif()" style="margin-top:6px">Cancelar (no despachar)</button></div></div>`;
+        input.value=''; btn.disabled=false; reenfocar();
+        return;
+      }
       if(d.resultado==='cancelada'){
         beep(true); flashCam('err'); mostrarFS('err','⛔ CANCELADA', `Apartá esta venta · ${esc(d.nro_venta)||''}`);
         out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">⛔ No despachar · cancelada</div>
@@ -3007,6 +3200,7 @@
       if(!r.ok) throw new Error(d.error||'error');
       const tl = d.tipo==='ppi' ? 'Pallet' : 'Bulto';
       if(d.resultado==='ok'){
+        if(_usoMano){ _prodMano=null; pintarProdMano(); }
         if(typeof beep==='function') beep(false);
         const it = efItems.find(x=>x.id===d.id); if(it) it.escaneado=true;
         efPintarColecta({total:d.total, escaneados:d.escaneados}); efRecuento();
