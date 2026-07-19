@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#F2F3F5; --surface:#FFFFFF;
@@ -609,7 +610,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v58</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v59</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -917,8 +918,14 @@
         <div class="status" id="verif-status"></div>
         <details class="verif-imp"><summary>📥 Importar productos en masa (pegá desde Excel)</summary>
           <p class="hint">Una línea por producto: <b>SKU</b> <b>EAN</b> (separados por tab, coma o punto y coma). Tercera columna opcional: <b>no</b> = no requiere verificación. Los SKU repetidos se actualizan.</p>
+          <div class="verif-add" style="margin:8px 0">
+            <label class="btn-light" style="cursor:pointer">📄 Subir Excel (.xlsx / .csv)
+              <input type="file" id="verif-excel" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarExcelProductos(this.files[0])">
+            </label>
+            <span class="hint" style="margin:0">Columna A = SKU · B = EAN · C (opcional) = "no". O pegalo abajo:</span>
+          </div>
           <textarea id="verif-import" placeholder="OFI210-NE&#9;7791234567890&#10;OFI210-BL&#9;7791234567891&#9;no"></textarea>
-          <button class="btn-scan" onclick="importarProductos()">Importar</button>
+          <button class="btn-scan" onclick="importarProductos()">Importar lo pegado</button>
         </details>
         <div class="verif-add">
           <input id="vp-sku" placeholder="SKU" maxlength="40">
@@ -1414,6 +1421,34 @@
       st.className='status ok'; st.textContent=`✓ ${d.importados} producto(s) importados${d.invalidas?` · ${d.invalidas} línea(s) inválidas`:''}.`;
       cargarVerif();
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function importarExcelProductos(file){
+    const st = document.getElementById('verif-status');
+    if(!file) return;
+    if(typeof XLSX === 'undefined'){ st.className='status err'; st.textContent='No cargó el lector de Excel. Revisá internet y recargá.'; return; }
+    st.className='status'; st.textContent='Leyendo '+file.name+'…';
+    try{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type:'array' });
+      const hoja = wb.Sheets[wb.SheetNames[0]];
+      const filas = XLSX.utils.sheet_to_json(hoja, { header:1, raw:false, defval:'' });
+      const lineas = [];
+      for(const f of filas){
+        const sku = String(f[0]||'').trim();
+        if(!sku || sku.toLowerCase()==='sku') continue;           // salta vacías y el encabezado
+        const ean = String(f[1]||'').replace(/\D/g,'');
+        const ter = String(f[2]||'').trim();
+        lineas.push([sku, ean, ter].filter((x,i)=>i<2 || x).join('\t'));
+      }
+      if(!lineas.length) throw new Error('No encontré filas con SKU en la columna A');
+      st.textContent = `Importando ${lineas.length} producto(s) de ${file.name}…`;
+      const r = await authFetch(`${API}/api/despacho/productos/importar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({texto: lineas.join('\n')})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent=`✓ ${d.importados} producto(s) importados desde ${file.name}${d.invalidas?` · ${d.invalidas} inválidas`:''}.`;
+      cargarVerif();
+    }catch(e){ st.className='status err'; st.textContent='Error leyendo el Excel: '+esc(e.message); }
+    finally{ document.getElementById('verif-excel').value=''; }
   }
 
   async function agregarProducto(){
