@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
     --bg:#F2F3F5; --surface:#FFFFFF;
@@ -610,7 +611,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v59</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v60</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -927,6 +928,13 @@
           <textarea id="verif-import" placeholder="OFI210-NE&#9;7791234567890&#10;OFI210-BL&#9;7791234567891&#9;no"></textarea>
           <button class="btn-scan" onclick="importarProductos()">Importar lo pegado</button>
         </details>
+        <div class="verif-add" style="background:#F7FAFF; border:1px solid #C7DBF7; border-radius:10px; padding:10px">
+          <b style="font-size:13px">🔑 Código de aprobación:</b>
+          <input id="verif-cod-aprob" placeholder="ej. APRUEBA-PONTEC-77" maxlength="40" style="font-family:'JetBrains Mono',monospace">
+          <button class="btn-light" onclick="guardarCodAprob()">Guardar</button>
+          <button class="btn-light" onclick="imprimirCodAprob()">🖨 Imprimir código de barras</button>
+          <span class="hint" style="margin:0; flex-basis:100%">Escaneándolo en lugar del EAN, el despacho queda aprobado por el encargado (se registra como "aprobado"). Guardalo impreso donde solo vos decidas.</span>
+        </div>
         <div class="verif-add">
           <input id="vp-sku" placeholder="SKU" maxlength="40">
           <input id="vp-ean" placeholder="EAN (código de barras)" maxlength="20">
@@ -1393,7 +1401,9 @@
       const est = document.getElementById('verif-estado');
       est.textContent = d.on ? 'ACTIVADA' : 'desactivada';
       est.className = d.on ? 'on' : '';
-      st.className='status'; st.textContent = `${d.total} producto(s) cargados · ${d.requieren} requieren verificación.`;
+      const inpCA = document.getElementById('verif-cod-aprob');
+      if(inpCA && d.codigo_aprob !== undefined) inpCA.value = d.codigo_aprob || '';
+      st.className='status'; st.textContent = `${d.total} producto(s) cargados · ${d.requieren} requieren verificación${d.tiene_codigo_aprob?' · código de aprobación configurado ✓':''}.`;
       buscarProductos();
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
   }
@@ -1418,9 +1428,36 @@
       const r = await authFetch(`${API}/api/despacho/productos/importar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({texto})});
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
       document.getElementById('verif-import').value='';
-      st.className='status ok'; st.textContent=`✓ ${d.importados} producto(s) importados${d.invalidas?` · ${d.invalidas} línea(s) inválidas`:''}.`;
+      let msgImp = `✓ ${d.importados} producto(s) importados${d.invalidas?` · ${d.invalidas} línea(s) inválidas`:''}.`;
+      if((d.conflictos_ean||[]).length) msgImp += ` ⚠️ ${d.conflictos_ean.length} EAN(s) repetidos entre SKUs quedaron AFUERA: ` + d.conflictos_ean.slice(0,5).map(c=>`${c.ean} (${c.skus.join(' / ')})`).join(' · ') + (d.conflictos_ean.length>5?' …':'');
+      st.className = (d.conflictos_ean||[]).length ? 'status err' : 'status ok';
+      st.textContent = msgImp;
       cargarVerif();
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function guardarCodAprob(){
+    const st = document.getElementById('verif-status');
+    const codigo = document.getElementById('verif-cod-aprob').value.trim();
+    try{
+      const r = await authFetch(`${API}/api/despacho/verificacion-codigo`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent = codigo ? '✓ Código de aprobación guardado. Imprimilo y guardalo bajo llave.' : 'Código de aprobación borrado (nadie puede aprobar sin EAN).';
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  function imprimirCodAprob(){
+    const codigo = document.getElementById('verif-cod-aprob').value.trim();
+    const st = document.getElementById('verif-status');
+    if(!codigo){ st.className='status err'; st.textContent='Primero escribí (y guardá) el código.'; return; }
+    if(typeof JsBarcode === 'undefined'){ st.className='status err'; st.textContent='No cargó el generador de códigos. Recargá la página.'; return; }
+    const w = window.open('', '_blank', 'width=520,height=420');
+    w.document.write('<html><head><title>Código de aprobación</title></head><body style="font-family:sans-serif;text-align:center;padding:24px">'
+      +'<h3 style="margin:0 0 4px">PONTEC · Código de aprobación</h3>'
+      +'<p style="margin:0 0 14px;color:#666;font-size:12px">Verificación de productos — uso exclusivo del encargado</p>'
+      +'<svg id="cb"></svg><br><button onclick="window.print()" style="margin-top:16px;padding:10px 22px;font-size:15px">🖨 Imprimir</button></body></html>');
+    w.document.close();
+    setTimeout(()=>{ try{ JsBarcode(w.document.getElementById('cb'), codigo, {format:'CODE128', width:2, height:90, fontSize:16}); }catch(e){ st.className='status err'; st.textContent='No pude generar el código: '+esc(e.message); } }, 250);
   }
 
   async function importarExcelProductos(file){
@@ -1445,7 +1482,10 @@
       st.textContent = `Importando ${lineas.length} producto(s) de ${file.name}…`;
       const r = await authFetch(`${API}/api/despacho/productos/importar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({texto: lineas.join('\n')})});
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
-      st.className='status ok'; st.textContent=`✓ ${d.importados} producto(s) importados desde ${file.name}${d.invalidas?` · ${d.invalidas} inválidas`:''}.`;
+      let msgX = `✓ ${d.importados} producto(s) importados desde ${file.name}${d.invalidas?` · ${d.invalidas} inválidas`:''}.`;
+      if((d.conflictos_ean||[]).length) msgX += ` ⚠️ ${d.conflictos_ean.length} EAN(s) repetidos entre SKUs quedaron AFUERA: ` + d.conflictos_ean.slice(0,5).map(c=>`${c.ean} (${c.skus.join(' / ')})`).join(' · ') + (d.conflictos_ean.length>5?' …':'');
+      st.className = (d.conflictos_ean||[]).length ? 'status err' : 'status ok';
+      st.textContent = msgX;
       cargarVerif();
     }catch(e){ st.className='status err'; st.textContent='Error leyendo el Excel: '+esc(e.message); }
     finally{ document.getElementById('verif-excel').value=''; }
@@ -2057,6 +2097,7 @@
   let _verifPend = null;   // {codigo, ean, sku, titulo, nro_venta} → esperando el EAN del producto
   let _verifOk = null;     // código de etiqueta ya verificado (se manda con verificado:true)
   let _prodMano = null;    // {sku, ean, t} → producto escaneado ANTES que la etiqueta (expira a los 90s)
+  let _verifEnvio = null;  // {codigo, scan} → segundo escaneo (EAN/SKU/aprobación) a validar por el servidor
 
   function pintarProdMano(){
     const el = document.getElementById('prod-mano'); if(!el) return;
@@ -2082,24 +2123,14 @@
     const out=document.getElementById('scan-result');
     const btn=document.getElementById('btn-scan');
 
-    // ¿Estamos esperando el EAN de un producto? → este escaneo es el producto, no una etiqueta
+    // ¿Estamos esperando el producto o el código de aprobación? → lo valida EL SERVIDOR
     if(_verifPend){
-      const leido = codigo.replace(/\D/g,'');
-      const esperado = String(_verifPend.ean||'').replace(/\D/g,'');
-      const coincide = (esperado && leido && leido === esperado) || (codigo.trim().toUpperCase() === String(_verifPend.sku||'').toUpperCase());
+      const orig = _verifPend.codigo;
+      _verifEnvio = { codigo: orig, scan: codigo };
+      _verifPend = null;
       input.value='';
-      if(coincide){
-        const orig = _verifPend.codigo; _verifOk = orig; _verifPend = null;
-        out.innerHTML = '<div class="status ok">✓ Producto correcto — registrando el despacho…</div>';
-        return escanear(orig);
-      }
-      beep(true); flashCam('err'); mostrarFS('err','⛔ PRODUCTO EQUIVOCADO', `No es ${esc(_verifPend.sku)||'el producto esperado'}`);
-      out.innerHTML = `<div class="scan-card scan-cancel"><div class="big">⛔ Producto equivocado</div>
-        <div class="det">Escaneaste <span class="mono">${esc(codigo).slice(0,30)}</span> y el producto esperado es
-        <b>${esc(_verifPend.sku)||'—'}</b>${_verifPend.ean?` (EAN <span class="mono">${esc(_verifPend.ean)}</span>)`:''}.<br>
-        Buscá el producto correcto y escaneá su código, o <button class="mini" onclick="cancelarVerif()">cancelá</button>.</div></div>`;
-      reenfocar();
-      return;
+      out.innerHTML = '<div class="status">Verificando…</div>';
+      return escanear(orig);
     }
 
     // MODO TEST: solo mostrar lo que leyó, sin despachar
@@ -2147,9 +2178,11 @@
     try{
       const r=await authFetch(`${API}/api/despacho/despachar`,{
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo, destino_id:_destinoActivo, verificado: _verifOk===codigo,
+          verif_codigo: (_verifEnvio && _verifEnvio.codigo===codigo) ? _verifEnvio.scan : null,
           producto_ean: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.ean : null,
           producto_sku: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.sku : null})});
       const _usoMano = !!(_prodMano && Date.now()-_prodMano.t<90000);
+      if(_verifEnvio && _verifEnvio.codigo===codigo) _verifEnvio=null;
       if(_verifOk===codigo) _verifOk=null;
       const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo verificar');
@@ -2159,6 +2192,16 @@
         beep(false); flashCam('warn'); mostrarFS('warn','📦 Producto en mano', esc(d.sku));
         out.innerHTML = `<div class="scan-card scan-warn"><div class="big">📦 Producto en mano: ${esc(d.sku)}</div>
           <div class="det">Ahora escaneá la <b>etiqueta del paquete</b> y se despacha de una si coincide.</div></div>`;
+        input.value=''; btn.disabled=false; reenfocar();
+        return;
+      }
+      if(d.resultado==='producto_equivocado'){
+        _verifPend = { codigo, ean: d.esperado_ean||null, sku: d.esperado_sku||'', titulo: d.titulo||'', nro_venta: d.nro_venta||'' };
+        beep(true); flashCam('err'); mostrarFS('err','⛔ CÓDIGO INCORRECTO', `Esperaba ${esc(d.esperado_sku)||'otro producto'}`);
+        out.innerHTML = `<div class="scan-card scan-cancel"><div class="big">⛔ No es el producto esperado</div>
+          <div class="det">Esta etiqueta es de <b>${esc(d.esperado_sku)||'—'}</b>${d.esperado_ean?` (EAN <span class="mono">${esc(d.esperado_ean)}</span>)`:''}.<br>
+          Escaneá el producto correcto, el <b>código de aprobación del encargado</b>, o
+          <button class="mini" onclick="cancelarVerif()">cancelá</button>.</div></div>`;
         input.value=''; btn.disabled=false; reenfocar();
         return;
       }
@@ -2178,7 +2221,7 @@
         out.innerHTML = `<div class="scan-card scan-warn"><div class="big">🔍 Verificá el producto</div>
           <div class="det">Etiqueta OK de <b>${esc(d.sku)||'—'}</b> · ${esc(d.titulo)||''}<br>
           Venta <span class="mono">${esc(d.nro_venta)||'—'}</span><br><br>
-          <b>Ahora escaneá el código de barras DEL PRODUCTO</b>${d.ean?` (EAN <span class="mono">${esc(d.ean)}</span>)`:' (o tipeá el SKU)'} para confirmarlo.<br>
+          <b>Ahora escaneá el código de barras DEL PRODUCTO</b>${d.ean?` (EAN <span class="mono">${esc(d.ean)}</span>)`:' (o tipeá el SKU)'} — o el <b>código de aprobación</b> del encargado.<br>
           <button class="mini" onclick="cancelarVerif()" style="margin-top:6px">Cancelar (no despachar)</button></div></div>`;
         input.value=''; btn.disabled=false; reenfocar();
         return;
