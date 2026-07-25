@@ -99,6 +99,7 @@
   .depcfg-log{font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--bg); color:var(--muted2)}
   .depcfg-log.col{background:#FFF3E4; color:#B25E00} .depcfg-log.flx{background:#E7F0FF; color:#1E4FBF}
   .depcfg-nota{font-size:11px; color:var(--muted); margin-top:4px; font-style:italic}
+  .depcfg-tildes{display:flex; flex-direction:column; gap:8px}
   @media(max-width:640px){ .depcfg-row{flex-wrap:wrap} }
   .tr-card{border:1px solid var(--line2); border-radius:12px; padding:14px; margin-bottom:14px}
   .tr-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
@@ -614,7 +615,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v63</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v65</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1558,10 +1559,16 @@
         const todos = g.every(x=>x.es_principal), alguno = g.some(x=>x.es_principal);
         return `
         <div class="depcfg-row${alguno?' principal':''}">
-          <label class="depcfg-radio" title="Tildá los depósitos TUYOS. Sus identidades de ML (Colecta y Flex) se marcan juntas.">
-            <input type="checkbox" ${todos?'checked':''} ${(!todos&&alguno)?'data-mixto="1"':''} onchange="marcarPrincipalGrupo('${esc(ids.join(','))}', this.checked)">
-            <span>Principal</span>
-          </label>
+          <div class="depcfg-tildes">
+            <label class="depcfg-radio" title="Tildá los depósitos TUYOS. Sus identidades de ML (Colecta y Flex) se marcan juntas.">
+              <input type="checkbox" ${todos?'checked':''} ${(!todos&&alguno)?'data-mixto="1"':''} onchange="marcarPrincipalGrupo('${esc(ids.join(','))}', this.checked)">
+              <span>Principal</span>
+            </label>
+            <label class="depcfg-radio" title="Si está tildado, al despachar desde este depósito se exige verificar el producto (EAN o código de aprobación). Destildalo para depósitos socios: solo impresión.">
+              <input type="checkbox" ${g.every(x=>x.verifica!==false)?'checked':''} onchange="marcarVerificaGrupo('${esc(ids.join(','))}', this.checked)">
+              <span>🔍 Verifica</span>
+            </label>
+          </div>
           <div class="depcfg-info">
             <input class="depcfg-alias" id="alias-${esc(ids[0])}" value="${esc(g[0].alias||'')}" placeholder="Ponele tu nombre (ej. ROSARIO)" maxlength="40">
             ${g.map(x=>`<div class="depcfg-dir">${badgeLog(x.logistica)} ${esc(x.direccion||'—')} <span class="depcfg-id">ID ${esc(x.ml_address_id)}</span></div>`).join('')}
@@ -1592,6 +1599,18 @@
       st.className='status ok';
       st.textContent = valor ? '✓ Depósito marcado como principal (todas sus identidades). Tu panel muestra la suma.' : 'Depósito quitado de principal.';
       _depsVinculados = null; pescarDepositosML(false); cargarDepositos(); cargarPanel(true);
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function marcarVerificaGrupo(idsCsv, valor){
+    const st = document.getElementById('dep-cfg-status');
+    try{
+      for(const id of idsCsv.split(',')){
+        const r = await authFetch(`${API}/api/despacho/depositos-ml/verifica`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ml_address_id: id, verifica: !!valor }) });
+        const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      }
+      st.className='status ok';
+      st.textContent = valor ? '✓ Este depósito verifica productos al despachar.' : '✓ Este depósito NO verifica: solo impresión (lo despacha el socio).';
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
   }
 
@@ -1672,6 +1691,8 @@
     sel.classList.toggle('otro', !!_depActual);
     if(_depActual) leerPanelOtroDep();
     else leerPanel();
+    const vistaActiva = document.querySelector('.view.active');
+    if(vistaActiva && vistaActiva.id === 'view-seguimiento') cargarSeguimiento();
   }
 
   async function leerPanelOtroDep(){
@@ -2961,10 +2982,15 @@
     const st=document.getElementById('status-seg');
     st.className='status'; st.textContent='Cargando el flujo…';
     try{
-      const r=await authFetch(`${API}/api/despacho/panel`); const d=await r.json();
+      const url = `${API}/api/despacho/panel${_depActual ? ('?deposito='+encodeURIComponent(_depActual)) : ''}`;
+      const r=await authFetch(url); const d=await r.json();
       if(!r.ok) throw new Error(d.error||'No se pudo cargar');
       _segData = d.etapas; _segAct = d.actualizado;
       pintarSeguimiento();
+      if(_depActual){
+        st.className='status';
+        st.innerHTML = `👁 Siguiendo los envíos de <b>${esc(_depActualNombre||_depActual)}</b> — acá verificás que el depósito los despache de verdad (impreso → en camino → entregado). <button class="mini" onclick="document.getElementById('dep-selector').value=''; cambiarDeposito();">Volver al mío</button>`;
+      }
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; document.getElementById('seg-cards').innerHTML=''; }
   }
   function setSegTipo(t){
