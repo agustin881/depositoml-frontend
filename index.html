@@ -96,6 +96,9 @@
   .depcfg-alias{width:100%; max-width:340px; padding:8px 10px; border:1px solid var(--line2); border-radius:8px; font-size:14px; font-weight:600; font-family:inherit; color:var(--ink)}
   .depcfg-dir{font-size:12px; color:var(--muted2); margin-top:4px}
   .depcfg-id{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--muted); background:var(--bg); padding:1px 6px; border-radius:6px; margin-left:4px}
+  .depcfg-log{font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--bg); color:var(--muted2)}
+  .depcfg-log.col{background:#FFF3E4; color:#B25E00} .depcfg-log.flx{background:#E7F0FF; color:#1E4FBF}
+  .depcfg-nota{font-size:11px; color:var(--muted); margin-top:4px; font-style:italic}
   @media(max-width:640px){ .depcfg-row{flex-wrap:wrap} }
   .tr-card{border:1px solid var(--line2); border-radius:12px; padding:14px; margin-bottom:14px}
   .tr-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
@@ -611,7 +614,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v62</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v63</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1539,24 +1542,71 @@
       st.textContent='';
       const deps = d.depositos||[];
       if(!deps.length){ lista.innerHTML = '<div class="status">ML no devolvió direcciones. Probá de nuevo.</div>'; return; }
-      lista.innerHTML = deps.map(x=>`
-        <div class="depcfg-row${x.es_principal?' principal':''}">
-          <label class="depcfg-radio" title="Un depósito físico puede tener varias identidades en ML (ej. Colecta y Flex): tildá todas las tuyas">
-            <input type="checkbox" ${x.es_principal?'checked':''} onchange="marcarPrincipalDep('${esc(x.ml_address_id)}', this.checked)">
+      // Agrupar por nombre: mismo alias = mismo depósito físico (varias identidades de ML)
+      const grupos = new Map();
+      for(const x of deps){
+        const k = (x.alias||'').trim().toUpperCase() || ('#'+x.ml_address_id);
+        if(!grupos.has(k)) grupos.set(k, []);
+        grupos.get(k).push(x);
+      }
+      const badgeLog = lg => !lg ? '<span class="depcfg-log">·</span>'
+        : lg.split('+').map(t => t==='colecta' ? '<span class="depcfg-log col">🚚 Colecta</span>'
+                                : t==='flex' ? '<span class="depcfg-log flx">⚡ Flex</span>'
+                                : `<span class="depcfg-log">${esc(t)}</span>`).join(' ');
+      lista.innerHTML = [...grupos.values()].map(g=>{
+        const ids = g.map(x=>x.ml_address_id);
+        const todos = g.every(x=>x.es_principal), alguno = g.some(x=>x.es_principal);
+        return `
+        <div class="depcfg-row${alguno?' principal':''}">
+          <label class="depcfg-radio" title="Tildá los depósitos TUYOS. Sus identidades de ML (Colecta y Flex) se marcan juntas.">
+            <input type="checkbox" ${todos?'checked':''} ${(!todos&&alguno)?'data-mixto="1"':''} onchange="marcarPrincipalGrupo('${esc(ids.join(','))}', this.checked)">
             <span>Principal</span>
           </label>
           <div class="depcfg-info">
-            <input class="depcfg-alias" id="alias-${esc(x.ml_address_id)}" value="${esc(x.alias||'')}" placeholder="Ponele tu nombre (ej. Arévalo Soriano)" maxlength="40">
-            <div class="depcfg-dir">${esc(x.direccion||'—')} <span class="depcfg-id">ID ${esc(x.ml_address_id)}</span></div>
+            <input class="depcfg-alias" id="alias-${esc(ids[0])}" value="${esc(g[0].alias||'')}" placeholder="Ponele tu nombre (ej. ROSARIO)" maxlength="40">
+            ${g.map(x=>`<div class="depcfg-dir">${badgeLog(x.logistica)} ${esc(x.direccion||'—')} <span class="depcfg-id">ID ${esc(x.ml_address_id)}</span></div>`).join('')}
+            ${g.length>1?`<div class="depcfg-nota">${g.length} identidades de ML agrupadas — es el mismo depósito físico</div>`:''}
           </div>
-          <button class="btn-light" onclick="guardarAliasDep('${esc(x.ml_address_id)}')">Guardar</button>
-        </div>`).join('');
+          <button class="btn-light" onclick="guardarAliasGrupo('${esc(ids.join(','))}')">Guardar</button>
+        </div>`;
+      }).join('');
+      lista.querySelectorAll('[data-mixto]').forEach(c=>c.indeterminate=true);
+      if(deps.some(x=>!(x.alias||'').trim()))
+        st.innerHTML = 'ℹ️ Tip: poniéndole <b>el mismo nombre</b> a dos identidades (ej. "ROSARIO"), se agrupan como un solo depósito.';
       let notas = [];
       if(d.origen === 'envios') notas.push('ℹ️ ML bloquea la consulta directa de direcciones, así que los depósitos se cosecharon de tus ventas de los últimos días (están todos los que tuvieron movimiento).');
       if(d.filtro_texto_activo) notas.push(`<span class="dep-warn">⚠️ Todavía no hay principal marcado: la app sigue filtrando por texto "${esc(d.filtro_texto_activo)}". Marcá el principal para pasar al filtro por ID exacto.</span>`);
       if(notas.length) st.innerHTML = notas.join('<br>');
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
     finally{ if(btn) btn.disabled = false; }
+  }
+
+  async function marcarPrincipalGrupo(idsCsv, valor){
+    const st = document.getElementById('dep-cfg-status');
+    st.className='status'; st.textContent='Actualizando…';
+    try{
+      for(const id of idsCsv.split(',')){
+        const r = await authFetch(`${API}/api/despacho/depositos-ml/principal`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ml_address_id: id, principal: !!valor }) });
+        const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      }
+      st.className='status ok';
+      st.textContent = valor ? '✓ Depósito marcado como principal (todas sus identidades). Tu panel muestra la suma.' : 'Depósito quitado de principal.';
+      _depsVinculados = null; pescarDepositosML(false); cargarDepositos(); cargarPanel(true);
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function guardarAliasGrupo(idsCsv){
+    const st = document.getElementById('dep-cfg-status');
+    const ids = idsCsv.split(',');
+    const alias = (document.getElementById('alias-'+ids[0]).value||'').trim();
+    try{
+      for(const id of ids){
+        const r = await authFetch(`${API}/api/despacho/depositos-ml/alias`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ml_address_id: id, alias }) });
+        const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      }
+      st.className='status ok'; st.textContent = alias ? `Guardado: "${alias}"${ids.length>1?' (en sus '+ids.length+' identidades)':''}.` : 'Alias borrado.';
+      _depsVinculados = null; pescarDepositosML(false); cargarDepositos();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
   }
 
   async function guardarAliasDep(id){
@@ -1597,11 +1647,15 @@
       const ppales = _depsVinculados.filter(x=>x.es_principal);
       const otros = _depsVinculados.filter(x=>!x.es_principal);
       const actual = sel.value;
-      const nomPpal = ppales.length
-        ? `${(ppales[0].alias||ppales[0].direccion||'Principal')}${ppales.length>1?` (+${ppales.length-1})`:''}`
-        : 'Depósito principal';
+      const gruposP = [...new Set(ppales.map(x=>(x.alias||x.direccion||'Principal').trim()))];
+      const nomPpal = gruposP.length ? gruposP.join(' + ') : 'Depósito principal';
+      const gruposO = new Map();
+      for(const x of otros){
+        const k = (x.alias||x.direccion||x.ml_address_id).trim();
+        if(!gruposO.has(k)) gruposO.set(k, x.ml_address_id); // primera identidad representa al grupo
+      }
       sel.innerHTML = `<option value="">📍 ${esc(nomPpal)}</option>` +
-        otros.map(x=>`<option value="${esc(x.ml_address_id)}">${esc(x.alias||x.direccion||x.ml_address_id)}</option>`).join('');
+        [...gruposO.entries()].map(([nom, id])=>`<option value="${esc(id)}">${esc(nom)}</option>`).join('');
       sel.value = actual || '';
       sel.classList.toggle('otro', !!sel.value);
     }catch(e){ /* sin lista, el selector queda con el default */ }
