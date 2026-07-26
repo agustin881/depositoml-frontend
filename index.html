@@ -615,7 +615,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v65</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v66</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1712,7 +1712,17 @@
       ];
       _panelData.flex = mapear(df); _panelData.colecta = mapear(dc);
       pintarTanda('flex'); pintarTanda('colecta');
-      est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>📍 Viendo depósito: <b>&nbsp;${esc(_depActualNombre||_depActual)}</b>&nbsp;· datos en vivo de ML (no es Arévalo Soriano)`;
+      // Transparencia: edad de los datos + auto-refresh cuando el fondo termina
+      let extra = '';
+      clearTimeout(window._otroDepRetry);
+      if(df.refrescando){
+        extra = ' · <b>actualizando…</b>';
+        window._otroDepRetry = setTimeout(()=>{ if(_depActual) leerPanelOtroDep(); }, 25000);
+      } else if(df.actualizado){
+        const edadMin = Math.round((Date.now() - new Date(df.actualizado).getTime())/60000);
+        if(edadMin > 6) extra = ` · datos de hace ${edadMin} min`;
+      }
+      est.innerHTML = `<span class="vivo-dot" style="background:var(--colecta)"></span>📍 Viendo depósito: <b>&nbsp;${esc(_depActualNombre||_depActual)}</b>&nbsp;· datos de ML${extra}`;
     }catch(e){ est.innerHTML = `<span class="vivo-dot" style="background:var(--err)"></span>Error consultando ${esc(_depActualNombre||_depActual)}: ${esc(e.message)}`; }
   }
   let _panelTimer = null;
