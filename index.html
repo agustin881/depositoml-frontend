@@ -241,6 +241,9 @@
   .fs.fs-bajando{background:#3a0f12}
   .fs-top{display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid rgba(255,255,255,.12)}
   .fs-dest{font-size:clamp(20px,3.5vw,40px); font-weight:800}
+  .fs-prod-mano{display:flex; align-items:center; justify-content:center; gap:14px; background:#FFF7E8; border:2px solid #F3D9A4; color:#8a5a00; border-radius:14px; padding:12px 18px; margin:10px auto; max-width:640px; font-size:clamp(16px,2.6vw,26px)}
+  .fs-prod-mano b{font-family:'JetBrains Mono',monospace}
+  .fs-soltar{background:#B25E00; color:#fff; border:none; border-radius:10px; padding:12px 20px; font-size:clamp(14px,2.2vw,22px); font-weight:800; cursor:pointer}
   .fs-top-actions{display:flex; align-items:center; gap:16px}
   .fs-bajar{display:flex; align-items:center; gap:8px; font-size:clamp(14px,1.6vw,20px); font-weight:700; color:#FF6B6B; cursor:pointer}
   .fs-bajar input{width:22px; height:22px}
@@ -615,7 +618,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v66</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v67</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1028,6 +1031,7 @@
 <div id="fs" class="fs" style="display:none">
   <div class="fs-top">
     <div class="fs-dest" id="fs-dest">—</div>
+    <div id="fs-prod-mano" class="fs-prod-mano" style="display:none"></div>
     <div class="fs-top-actions">
       <label class="fs-bajar"><input type="checkbox" id="fs-modo-bajar" onchange="fsToggleBajar()"> 🔽 Bajar de la colecta</label>
       <button class="fs-salir" onclick="cerrarFS()">✕ Salir</button>
@@ -2202,14 +2206,24 @@
   let _verifOk = null;     // código de etiqueta ya verificado (se manda con verificado:true)
   let _prodMano = null;    // {sku, ean, t} → producto escaneado ANTES que la etiqueta (expira a los 90s)
   let _verifEnvio = null;  // {codigo, scan} → segundo escaneo (EAN/SKU/aprobación) a validar por el servidor
+  let _scanEnCurso = null;    // etiqueta cuyo pedido está viajando al servidor
+  let _verifAnticipado = null; // producto escaneado MIENTRAS la etiqueta viaja → se verifican juntos
 
   function pintarProdMano(){
-    const el = document.getElementById('prod-mano'); if(!el) return;
-    if(_prodMano && Date.now()-_prodMano.t < 90000){
-      el.style.display='flex';
-      el.innerHTML = `📦 En mano: <b>${esc(_prodMano.sku)}</b> — escaneá la etiqueta del paquete
-        <button class="mini" onclick="soltarProdMano()">✕ soltar</button>`;
-    } else { _prodMano=null; el.style.display='none'; el.innerHTML=''; }
+    const el = document.getElementById('prod-mano');
+    const fsEl = document.getElementById('fs-prod-mano');
+    const activo = _prodMano && Date.now()-_prodMano.t < 90000;
+    if(!activo) _prodMano = null;
+    if(el){
+      el.style.display = activo ? 'flex' : 'none';
+      el.innerHTML = activo ? `📦 En mano: <b>${esc(_prodMano.sku)}</b> — escaneá la etiqueta del paquete
+        <button class="mini" onclick="soltarProdMano()">✕ soltar</button>` : '';
+    }
+    if(fsEl){
+      fsEl.style.display = activo ? 'flex' : 'none';
+      fsEl.innerHTML = activo ? `📦 En mano: <b>${esc(_prodMano.sku)}</b>
+        <button class="fs-soltar" onclick="soltarProdMano()">✕ SOLTAR</button>` : '';
+    }
   }
   function soltarProdMano(){ _prodMano=null; pintarProdMano(); reenfocar(); }
 
@@ -2226,6 +2240,24 @@
     if(!codigo) return;
     const out=document.getElementById('scan-result');
     const btn=document.getElementById('btn-scan');
+
+    // ⚡ Ritmo rápido: si una etiqueta está viajando al servidor y escaneás el
+    // producto sin esperar, lo guardamos y se verifican JUNTOS al llegar la respuesta.
+    if(_scanEnCurso && _scanEnCurso !== codigo){
+      const dig = codigo.replace(/\D/g,'');
+      const pareceEtiqueta = codigo.startsWith('{') || dig.length === 11 || dig.length === 16;
+      input.value='';
+      if(!pareceEtiqueta){
+        _verifAnticipado = codigo;
+        out.innerHTML = `<div class="status">⚡ Producto capturado — verificando las dos cosas juntas…</div>`;
+        reenfocar();
+        return;
+      }
+      beep(true);
+      out.innerHTML = `<div class="status err">⏳ Esperá el resultado del paquete anterior antes de escanear otra etiqueta.</div>`;
+      reenfocar();
+      return;
+    }
 
     // ¿Estamos esperando el producto o el código de aprobación? → lo valida EL SERVIDOR
     if(_verifPend){
@@ -2278,6 +2310,7 @@
     }
 
     btn.disabled=true;
+    _scanEnCurso = codigo;
     out.innerHTML=`<div class="status">Chequeando la venta en Mercado Libre…</div>`;
     try{
       const r=await authFetch(`${API}/api/despacho/despachar`,{
@@ -2285,11 +2318,12 @@
           verif_codigo: (_verifEnvio && _verifEnvio.codigo===codigo) ? _verifEnvio.scan : null,
           producto_ean: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.ean : null,
           producto_sku: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.sku : null})});
+      _scanEnCurso = null;
       const _usoMano = !!(_prodMano && Date.now()-_prodMano.t<90000);
       if(_verifEnvio && _verifEnvio.codigo===codigo) _verifEnvio=null;
       if(_verifOk===codigo) _verifOk=null;
       const d=await r.json();
-      if(!r.ok) throw new Error(d.error||'No se pudo verificar');
+      if(!r.ok){ _verifAnticipado=null; throw new Error(d.error||'No se pudo verificar'); }
       if(d.resultado==='producto'){
         _prodMano = { sku: d.sku, ean: d.ean||null, t: Date.now() };
         pintarProdMano();
@@ -2320,6 +2354,14 @@
         return;
       }
       if(d.resultado==='verificar'){
+        if(_verifAnticipado){
+          // ⚡ El producto ya fue escaneado mientras la etiqueta viajaba → verificamos juntos, sin esperar
+          const v = _verifAnticipado; _verifAnticipado = null;
+          _verifEnvio = { codigo, scan: v };
+          out.innerHTML = '<div class="status">⚡ Verificando etiqueta + producto juntos…</div>';
+          btn.disabled=false;
+          return escanear(codigo);
+        }
         _verifPend = { codigo, ean: d.ean||null, sku: d.sku||'', titulo: d.titulo||'', nro_venta: d.nro_venta||'' };
         beep(false); flashCam('warn'); mostrarFS('warn','🔍 VERIFICÁ EL PRODUCTO', esc(d.sku)||'Escaneá el EAN');
         out.innerHTML = `<div class="scan-card scan-warn"><div class="big">🔍 Verificá el producto</div>
@@ -2363,10 +2405,11 @@
         cargarDespachados(); cargarDestinos();
       }
     }catch(e){
+      _scanEnCurso = null; _verifAnticipado = null;
       beep(true); mostrarFS('err','Error', esc(e.message));
       out.innerHTML=`<div class="scan-card scan-cancel"><div class="big">Error</div>
         <div class="det">${esc(e.message)}</div></div>`;
-    }finally{ btn.disabled=false; reenfocar(); }
+    }finally{ _scanEnCurso = null; btn.disabled=false; reenfocar(); }
   }
   async function cargarDespachados(){
     const st=document.getElementById('status-verif');
@@ -3387,6 +3430,7 @@
       if(!r.ok) throw new Error(d.error||'error');
       const tl = d.tipo==='ppi' ? 'Pallet' : 'Bulto';
       if(d.resultado==='ok'){
+        _verifAnticipado = null;
         if(_usoMano){ _prodMano=null; pintarProdMano(); }
         if(typeof beep==='function') beep(false);
         const it = efItems.find(x=>x.id===d.id); if(it) it.escaneado=true;
