@@ -100,6 +100,9 @@
   .depcfg-log.col{background:#FFF3E4; color:#B25E00} .depcfg-log.flx{background:#E7F0FF; color:#1E4FBF}
   .depcfg-nota{font-size:11px; color:var(--muted); margin-top:4px; font-style:italic}
   .depcfg-tildes{display:flex; flex-direction:column; gap:8px}
+  .pill.verif-ean{background:#E9F9F0; color:#0B7A45}
+  .pill.verif-aprob{background:#FFF3D6; color:#8a5a00; font-weight:800}
+  .verif-resumen{font-weight:600; font-size:12px; color:var(--muted2)}
   @media(max-width:640px){ .depcfg-row{flex-wrap:wrap} }
   .tr-card{border:1px solid var(--line2); border-radius:12px; padding:14px; margin-bottom:14px}
   .tr-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
@@ -618,7 +621,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v67</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v68</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -2444,9 +2447,14 @@
       document.getElementById('list-faltan').innerHTML=html;
       let html2='';
       if(d.despachadas.length){
-        html2+=`<div class="group-h">Escaneadas hoy</div><div class="list">`;
+        const v = d.verif || {};
+        const partes = [];
+        if(v.ean) partes.push(`✅ ${v.ean} por EAN`);
+        if(v.aprobado) partes.push(`🔑 ${v.aprobado} con código de aprobación`);
+        if(v.sin) partes.push(`${v.sin} sin verificación`);
+        html2+=`<div class="group-h">Escaneadas hoy${partes.length?` · <span class="verif-resumen">${partes.join(' · ')}</span>`:''}</div><div class="list">`;
         for(const s of d.despachadas) html2+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.colecta_carrier?` <span class="pill">${esc(s.colecta_carrier)}${s.colecta_patente?' · '+esc(s.colecta_patente):''}</span>`:''}</span>
+          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.verificacion==='aprobado'?' <span class="pill verif-aprob">🔑 aprobado</span>':s.verificacion==='ean'?' <span class="pill verif-ean">✅ EAN</span>':''}${s.colecta_carrier?` <span class="pill">${esc(s.colecta_carrier)}${s.colecta_patente?' · '+esc(s.colecta_patente):''}</span>`:''}</span>
           <span class="venta">${esc(s.nro_venta)||""}</span>
           <span class="u">${new Date(s.despachado_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
         html2+=`</div>`;
