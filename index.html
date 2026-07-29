@@ -247,6 +247,13 @@
   .fs-prod-mano{display:flex; align-items:center; justify-content:center; gap:14px; background:#FFF7E8; border:2px solid #F3D9A4; color:#8a5a00; border-radius:14px; padding:12px 18px; margin:10px auto; max-width:640px; font-size:clamp(16px,2.6vw,26px)}
   .fs-prod-mano b{font-family:'JetBrains Mono',monospace}
   .fs-soltar{background:#B25E00; color:#fff; border:none; border-radius:10px; padding:12px 20px; font-size:clamp(14px,2.2vw,22px); font-weight:800; cursor:pointer}
+  .fs-verif-pend{display:flex; align-items:center; justify-content:center; gap:14px; background:#E7F0FF; border:2px solid #A9C7F5; color:#1E4FBF; border-radius:14px; padding:12px 18px; margin:10px auto; max-width:640px; font-size:clamp(16px,2.6vw,26px)}
+  .fs-verif-pend b{font-family:'JetBrains Mono',monospace}
+  .fs-cancelar{background:#B3261E}
+  @media(pointer:coarse){
+    .scan-card .mini{padding:12px 18px; font-size:15px; border-radius:10px}
+    .prod-mano .mini{padding:10px 16px; font-size:14.5px}
+  }
   .fs-top-actions{display:flex; align-items:center; gap:16px}
   .fs-bajar{display:flex; align-items:center; gap:8px; font-size:clamp(14px,1.6vw,20px); font-weight:700; color:#FF6B6B; cursor:pointer}
   .fs-bajar input{width:22px; height:22px}
@@ -621,7 +628,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v68</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v71</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1035,6 +1042,7 @@
   <div class="fs-top">
     <div class="fs-dest" id="fs-dest">—</div>
     <div id="fs-prod-mano" class="fs-prod-mano" style="display:none"></div>
+    <div id="fs-verif-pend" class="fs-verif-pend" style="display:none"></div>
     <div class="fs-top-actions">
       <label class="fs-bajar"><input type="checkbox" id="fs-modo-bajar" onchange="fsToggleBajar()"> 🔽 Bajar de la colecta</label>
       <button class="fs-salir" onclick="cerrarFS()">✕ Salir</button>
@@ -2189,14 +2197,17 @@
   }
 
   // ---------- Verificación: escaneo de despacho ----------
+  let _beepCtx = null; // UN solo contexto de audio reutilizado: en celulares, crear uno por pitido rompe el sonido tras muchos escaneos
   function beep(error){
     try{
-      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      if(!_beepCtx || _beepCtx.state === 'closed') _beepCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const ctx = _beepCtx;
+      if(ctx.state === 'suspended') ctx.resume();
       const o=ctx.createOscillator(), g=ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
       o.frequency.value=error?180:900; g.gain.value=.25;
       o.start();
-      setTimeout(()=>{ o.stop(); ctx.close(); }, error?600:130);
+      setTimeout(()=>{ try{ o.stop(); o.disconnect(); g.disconnect(); }catch(e){} }, error?600:130);
     }catch(e){}
   }
 
@@ -2230,8 +2241,18 @@
   }
   function soltarProdMano(){ _prodMano=null; pintarProdMano(); reenfocar(); }
 
+  function pintarVerifPend(){
+    const fsEl = document.getElementById('fs-verif-pend'); if(!fsEl) return;
+    if(_verifPend){
+      fsEl.style.display='flex';
+      fsEl.innerHTML = `🔍 Escaneá el producto: <b>${esc(_verifPend.sku)||'—'}</b>
+        <button class="fs-soltar fs-cancelar" onclick="cancelarVerif()">✕ CANCELAR</button>`;
+    } else { fsEl.style.display='none'; fsEl.innerHTML=''; }
+  }
+
   function cancelarVerif(){
     _verifPend = null;
+    pintarVerifPend();
     const out = document.getElementById('scan-result');
     if(out) out.innerHTML = '<div class="status">Verificación cancelada. El paquete NO quedó despachado.</div>';
     reenfocar();
@@ -2252,11 +2273,12 @@
       input.value='';
       if(!pareceEtiqueta){
         _verifAnticipado = codigo;
+        beep(false); mostrarFS('warn','⚡ Producto capturado','Verificando las dos cosas juntas…');
         out.innerHTML = `<div class="status">⚡ Producto capturado — verificando las dos cosas juntas…</div>`;
         reenfocar();
         return;
       }
-      beep(true);
+      beep(true); mostrarFS('err','⏳ Esperá','Todavía estoy con el paquete anterior');
       out.innerHTML = `<div class="status err">⏳ Esperá el resultado del paquete anterior antes de escanear otra etiqueta.</div>`;
       reenfocar();
       return;
@@ -2267,6 +2289,7 @@
       const orig = _verifPend.codigo;
       _verifEnvio = { codigo: orig, scan: codigo };
       _verifPend = null;
+      pintarVerifPend();
       input.value='';
       out.innerHTML = '<div class="status">Verificando…</div>';
       return escanear(orig);
@@ -2303,7 +2326,7 @@
             <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
             Venta <span class="mono">${esc(d.nro_venta)||'—'}</span>${d.destino_nombre?' · sacado de <b>'+esc(d.destino_nombre)+'</b>':''}<br>
             Volvió a quedar pendiente.</div></div>`;
-          cargarDespachados(); cargarDestinos();
+          programarRefrescoTablero();
         }
       }catch(e){
         beep(true); mostrarFS('err','Error', esc(e.message));
@@ -2338,6 +2361,7 @@
       }
       if(d.resultado==='producto_equivocado'){
         _verifPend = { codigo, ean: d.esperado_ean||null, sku: d.esperado_sku||'', titulo: d.titulo||'', nro_venta: d.nro_venta||'' };
+        pintarVerifPend();
         beep(true); flashCam('err'); mostrarFS('err','⛔ CÓDIGO INCORRECTO', `Esperaba ${esc(d.esperado_sku)||'otro producto'}`);
         out.innerHTML = `<div class="scan-card scan-cancel"><div class="big">⛔ No es el producto esperado</div>
           <div class="det">Esta etiqueta es de <b>${esc(d.esperado_sku)||'—'}</b>${d.esperado_ean?` (EAN <span class="mono">${esc(d.esperado_ean)}</span>)`:''}.<br>
@@ -2366,6 +2390,7 @@
           return escanear(codigo);
         }
         _verifPend = { codigo, ean: d.ean||null, sku: d.sku||'', titulo: d.titulo||'', nro_venta: d.nro_venta||'' };
+        pintarVerifPend();
         beep(false); flashCam('warn'); mostrarFS('warn','🔍 VERIFICÁ EL PRODUCTO', esc(d.sku)||'Escaneá el EAN');
         out.innerHTML = `<div class="scan-card scan-warn"><div class="big">🔍 Verificá el producto</div>
           <div class="det">Etiqueta OK de <b>${esc(d.sku)||'—'}</b> · ${esc(d.titulo)||''}<br>
@@ -2405,7 +2430,7 @@
         out.innerHTML=`<div class="scan-card ${conAviso?'scan-warn':'scan-ok'}"><div class="big">✓ Cargada${conAviso?' · revisá' : ''}</div>
           <div class="det"><b>${esc(d.sku)||'SIN SKU'}</b> · ${esc(d.titulo)||''}<br>
           Venta <span class="mono">${esc(d.nro_venta)||'—'}</span> · ${esc(d.tipo)||''}${dest}${d.aviso?'<br>⚠ '+esc(d.aviso):''}</div></div>`;
-        cargarDespachados(); cargarDestinos();
+        programarRefrescoTablero();
       }
     }catch(e){
       _scanEnCurso = null; _verifAnticipado = null;
@@ -2414,6 +2439,23 @@
         <div class="det">${esc(e.message)}</div></div>`;
     }finally{ _scanEnCurso = null; btn.disabled=false; reenfocar(); }
   }
+  // Tras cada escaneo: el contador sube AL INSTANTE (local) y el tablero completo
+  // se recarga UNA vez, 2s después del último escaneo (no una vez por paquete).
+  let _tabTimer = null, _destUltimo = 0;
+  function bumpContadoresLocal(){
+    const fc = document.getElementById('fs-count');
+    if(fc) fc.textContent = (parseInt(fc.textContent)||0) + 1;
+    const fp = document.getElementById('fs-pend');
+    if(fp) fp.textContent = Math.max(0, (parseInt(fp.textContent)||0) - 1);
+  }
+  function programarRefrescoTablero(){
+    clearTimeout(_tabTimer);
+    _tabTimer = setTimeout(()=>{
+      cargarDespachados();
+      if(Date.now() - _destUltimo > 60000){ _destUltimo = Date.now(); cargarDestinos(); }
+    }, 2000);
+  }
+
   async function cargarDespachados(){
     const st=document.getElementById('status-verif');
     st.className='status'; st.textContent='Cargando el tablero del día…';
@@ -3439,6 +3481,8 @@
       const tl = d.tipo==='ppi' ? 'Pallet' : 'Bulto';
       if(d.resultado==='ok'){
         _verifAnticipado = null;
+        _verifPend = null; pintarVerifPend();
+        bumpContadoresLocal();
         if(_usoMano){ _prodMano=null; pintarProdMano(); }
         if(typeof beep==='function') beep(false);
         const it = efItems.find(x=>x.id===d.id); if(it) it.escaneado=true;
