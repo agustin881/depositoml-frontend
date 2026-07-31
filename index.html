@@ -100,6 +100,13 @@
   .depcfg-log.col{background:#FFF3E4; color:#B25E00} .depcfg-log.flx{background:#E7F0FF; color:#1E4FBF}
   .depcfg-nota{font-size:11px; color:var(--muted); margin-top:4px; font-style:italic}
   .depcfg-tildes{display:flex; flex-direction:column; gap:8px}
+  .herr-tabs{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+  .herr-tab{font:inherit; font-weight:700; font-size:13.5px; border:1px solid var(--line2); background:#fff; padding:9px 16px; border-radius:999px; cursor:pointer; color:var(--muted2)}
+  .herr-tab.activa{background:var(--flex-d); border-color:var(--flex-d); color:#fff}
+  .et-row{display:flex; justify-content:space-between; gap:10px; padding:9px 12px; border-bottom:1px solid var(--line); cursor:pointer; border-radius:8px}
+  .et-row:hover{background:var(--bg)}
+  .et-sel{font-size:14px; margin:10px 0 4px}
+  #et-ean{font-family:'JetBrains Mono',monospace; background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:1px 8px}
   .pill.verif-ean{background:#E9F9F0; color:#0B7A45}
   .pill.verif-aprob{background:#FFF3D6; color:#8a5a00; font-weight:800}
   .verif-resumen{font-weight:600; font-size:12px; color:var(--muted2)}
@@ -628,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v71</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v72</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -637,7 +644,7 @@
       <button class="tab active" data-tab="imprimir" onclick="verTab('imprimir')">Imprimir <span class="badge badge-imprimir" style="display:none">0</span></button>
       <button class="tab" data-tab="despachar" onclick="verTab('despachar')">Despachar <span class="badge badge-despachar" style="display:none">0</span></button>
       <button class="tab" data-tab="seguimiento" onclick="verTab('seguimiento')">Seguimiento</button>
-      <button class="tab" data-tab="full" onclick="verTab('full')">Envíos Full</button>
+      <button class="tab" data-tab="full" onclick="verTab('full')">🧰 Herramientas</button>
       <button class="tab" data-tab="pagos" onclick="verTab('pagos')">Pagos de envíos</button>
       <button class="tab tab-config" data-tab="config" onclick="verTab('config')">⚙</button>
     </nav>
@@ -841,6 +848,38 @@
 
     <!-- ===== CONFIGURACIÓN ===== -->
     <section id="view-full" class="view">
+      <div class="herr-tabs">
+        <button class="herr-tab activa" id="herr-tab-full" onclick="verHerr('full')">📦 Impresión Envíos Full</button>
+        <button class="herr-tab" id="herr-tab-etiq" onclick="verHerr('etiq')">🏷 Etiquetas de productos</button>
+      </div>
+
+      <div id="herr-panel-etiq" style="display:none">
+        <div class="card-box">
+          <h2>🏷 Etiquetas de productos</h2>
+          <p class="hint">Buscá el producto (el EAN sale de tu catálogo de verificación), completá los textos y elegí el formato: <b>10×15 cm</b> (etiqueta completa) o <b>5×2,5 cm</b> (solo el código de barras).</p>
+          <div class="verif-add">
+            <input id="et-buscar" placeholder="🔎 Buscar por SKU o EAN…" oninput="clearTimeout(window._etT); window._etT=setTimeout(etBuscar, 350)" style="flex:1; min-width:220px">
+          </div>
+          <div id="et-resultados"></div>
+          <div id="et-form" style="display:none">
+            <div class="et-sel">Producto: <b id="et-sku" class="mono"></b> · EAN <span id="et-ean" class="p-dato mono"></span></div>
+            <div class="verif-add">
+              <input id="et-variante" placeholder="VARIANTE (ej. CELESTE)" maxlength="24" style="width:220px; text-transform:uppercase">
+              <input id="et-desc" placeholder="Descripción (ej. Cochecito Paraguitas)" maxlength="40" style="flex:1; min-width:220px">
+            </div>
+            <div class="verif-add">
+              <input id="et-origen" value="MADE IN CHINA" maxlength="30" style="width:180px">
+              <label>Copias <input type="number" id="et-copias" value="1" min="1" max="200" style="width:70px"></label>
+              <label><input type="radio" name="et-fmt" value="grande" checked> 10×15 completa</label>
+              <label><input type="radio" name="et-fmt" value="chica"> 5×2,5 solo código</label>
+              <button class="btn-scan" onclick="etImprimir()">🖨 Imprimir</button>
+            </div>
+            <div class="status" id="et-status"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="herr-panel-full">
       <div class="ef-wrap">
         <div class="ef-grid">
           <div class="ef-card">
@@ -898,6 +937,7 @@
           </div>
         </div>
       </div>
+    </div>
     </section>
 
     <section id="view-pagos" class="view">
@@ -1028,7 +1068,7 @@
     </button>
     <button class="navbtn" data-tab="full" onclick="verTab('full')">
       <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      Full
+      Herram.
     </button>
     <button class="navbtn" data-tab="pagos" onclick="verTab('pagos')">
       <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
@@ -1401,6 +1441,102 @@
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
       cargarTransportes();
     }catch(e){ alert('Error: '+e.message); }
+  }
+
+  // ── Herramientas: subpestañas + etiquetas de productos ──
+  function verHerr(cual){
+    document.getElementById('herr-panel-full').style.display = cual==='full' ? '' : 'none';
+    document.getElementById('herr-panel-etiq').style.display = cual==='etiq' ? '' : 'none';
+    document.getElementById('herr-tab-full').classList.toggle('activa', cual==='full');
+    document.getElementById('herr-tab-etiq').classList.toggle('activa', cual==='etiq');
+  }
+
+  let _etProd = null;
+  async function etBuscar(){
+    const cont = document.getElementById('et-resultados');
+    const b = (document.getElementById('et-buscar').value||'').trim();
+    if(!b){ cont.innerHTML=''; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos?buscar=${encodeURIComponent(b)}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      if(!(d.productos||[]).length){ cont.innerHTML='<div class="status">Sin resultados en el catálogo. Cargalo en ⚙ Ajustes → Verificación.</div>'; return; }
+      cont.innerHTML = d.productos.slice(0,15).map(p=>
+        `<div class="et-row" onclick="etElegir('${esc(p.sku)}','${esc(p.ean||'')}')"><b class="mono">${esc(p.sku)}</b><span class="mono" style="color:var(--muted2)">${esc(p.ean||'sin EAN')}</span></div>`).join('');
+    }catch(e){ cont.innerHTML='<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  function etElegir(sku, ean){
+    _etProd = { sku, ean: (ean||'').replace(/\D/g,'') };
+    document.getElementById('et-sku').textContent = sku;
+    document.getElementById('et-ean').textContent = _etProd.ean || 'sin EAN (va el SKU en Code128)';
+    document.getElementById('et-form').style.display='';
+    document.getElementById('et-resultados').innerHTML='';
+    document.getElementById('et-buscar').value = sku;
+    document.getElementById('et-status').textContent='';
+  }
+
+  function etCodigo(w, el, valor){
+    // EAN-13 si el código es válido; si no, Code128 (sirve igual para escanear)
+    try{ JsBarcode(el, valor, {format:'EAN13', width:3, height:110, fontSize:26, margin:0}); return 'EAN13'; }
+    catch(e){ JsBarcode(el, valor, {format:'CODE128', width:2.4, height:110, fontSize:22, margin:0}); return 'CODE128'; }
+  }
+
+  function etImprimir(){
+    const st = document.getElementById('et-status');
+    if(!_etProd){ st.className='status err'; st.textContent='Elegí un producto del buscador.'; return; }
+    if(typeof JsBarcode === 'undefined'){ st.className='status err'; st.textContent='No cargó el generador de códigos. Recargá la página.'; return; }
+    const valor = _etProd.ean || _etProd.sku;
+    const fmt = document.querySelector('input[name="et-fmt"]:checked').value;
+    const copias = Math.min(200, Math.max(1, parseInt(document.getElementById('et-copias').value)||1));
+    const variante = (document.getElementById('et-variante').value||'').trim().toUpperCase();
+    const desc = (document.getElementById('et-desc').value||'').trim();
+    const origen = (document.getElementById('et-origen').value||'').trim();
+    const skuVista = esc(_etProd.sku).replace(/-/g,' - ');
+    const skuTam = _etProd.sku.length > 13 ? '9mm' : (_etProd.sku.length > 9 ? '12mm' : '15mm');
+
+    const w = window.open('', '_blank', 'width=560,height=760');
+    let paginas = '';
+    for(let i=0;i<copias;i++){
+      if(fmt==='grande'){
+        paginas += `<div class="lab g">
+          <div class="sku" style="font-size:${skuTam}">${skuVista}</div>
+          <div class="raya"></div>
+          ${variante?`<div class="var">${esc(variante)}</div>`:''}
+          ${desc?`<div class="des">${esc(desc)}</div>`:''}
+          <svg id="bc${i}"></svg>
+          <div class="pie">Importa y Distribuye:<br><b>PONTEC S.A.</b><br>WWW.PONTECSA.COM<br>CUIT: 30-71565406-3<br>Rosario, Santa Fe, Argentina</div>
+          ${origen?`<div class="orig">${esc(origen)}</div>`:''}
+        </div>`;
+      } else {
+        paginas += `<div class="lab c"><svg id="bc${i}"></svg></div>`;
+      }
+    }
+    const tam = fmt==='grande' ? '100mm 150mm' : '50mm 25mm';
+    w.document.write(`<html><head><title>Etiqueta ${esc(_etProd.sku)}</title><style>
+      @page{ size:${tam}; margin:0 }
+      *{ box-sizing:border-box } body{ margin:0; font-family:'Segoe UI',Arial,sans-serif; color:#000 }
+      .lab{ page-break-after:always; display:flex; flex-direction:column; align-items:center; text-align:center; overflow:hidden }
+      .lab.g{ width:100mm; height:150mm; padding:9mm 6mm 7mm }
+      .lab.c{ width:50mm; height:25mm; justify-content:center; padding:1.5mm }
+      .sku{ font-weight:900; letter-spacing:-.5mm; white-space:nowrap; line-height:1 }
+      .raya{ width:88mm; border-top:.65mm solid #000; margin:3.5mm 0 4.5mm }
+      .var{ font-size:10.5mm; font-weight:900; line-height:1.1 }
+      .des{ font-size:6mm; margin-top:1mm }
+      .lab.g svg{ width:80mm; height:auto; margin:5mm 0 4mm }
+      .lab.c svg{ width:46mm; height:21mm }
+      .pie{ font-size:5.2mm; line-height:1.35 }
+      .orig{ font-size:6.2mm; font-weight:900; margin-top:auto }
+      .print-btn{ position:fixed; top:6px; right:6px; padding:10px 18px; font-size:15px; cursor:pointer }
+      @media print{ .print-btn{ display:none } }
+    </style></head><body>${paginas}<button class="print-btn" onclick="window.print()">🖨 Imprimir</button></body></html>`);
+    w.document.close();
+    setTimeout(()=>{
+      let tipo='';
+      try{ for(let i=0;i<copias;i++) tipo = etCodigo(w, w.document.getElementById('bc'+i), valor); }
+      catch(e){ st.className='status err'; st.textContent='No pude generar el código: '+esc(e.message); return; }
+      st.className='status ok';
+      st.textContent = `✓ ${copias} etiqueta(s) de ${_etProd.sku} listas (${fmt==='grande'?'10×15':'5×2,5'} · ${tipo}${tipo==='CODE128'?' — el EAN no era válido, usé Code128':''}).`;
+    }, 300);
   }
 
   // ── Ajustes → Verificación de productos ──
