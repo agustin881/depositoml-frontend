@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v72</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v73</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -2366,12 +2366,12 @@
     if(!activo) _prodMano = null;
     if(el){
       el.style.display = activo ? 'flex' : 'none';
-      el.innerHTML = activo ? `📦 En mano: <b>${esc(_prodMano.sku)}</b> — escaneá la etiqueta del paquete
+      el.innerHTML = activo ? `${_prodMano.aprob?'🔑':'📦'} En mano: <b>${esc(_prodMano.sku)}</b> — escaneá la etiqueta del paquete
         <button class="mini" onclick="soltarProdMano()">✕ soltar</button>` : '';
     }
     if(fsEl){
       fsEl.style.display = activo ? 'flex' : 'none';
-      fsEl.innerHTML = activo ? `📦 En mano: <b>${esc(_prodMano.sku)}</b>
+      fsEl.innerHTML = activo ? `${_prodMano.aprob?'🔑':'📦'} En mano: <b>${esc(_prodMano.sku)}</b>
         <button class="fs-soltar" onclick="soltarProdMano()">✕ SOLTAR</button>` : '';
     }
   }
@@ -2477,15 +2477,25 @@
     try{
       const r=await authFetch(`${API}/api/despacho/despachar`,{
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo, destino_id:_destinoActivo, verificado: _verifOk===codigo,
-          verif_codigo: (_verifEnvio && _verifEnvio.codigo===codigo) ? _verifEnvio.scan : null,
-          producto_ean: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.ean : null,
-          producto_sku: (_prodMano && Date.now()-_prodMano.t<90000) ? _prodMano.sku : null})});
+          verif_codigo: (_verifEnvio && _verifEnvio.codigo===codigo) ? _verifEnvio.scan
+                       : ((_prodMano && _prodMano.aprob && Date.now()-_prodMano.t<90000) ? _prodMano.aprob : null),
+          producto_ean: (_prodMano && !_prodMano.aprob && Date.now()-_prodMano.t<90000) ? _prodMano.ean : null,
+          producto_sku: (_prodMano && !_prodMano.aprob && Date.now()-_prodMano.t<90000) ? _prodMano.sku : null})});
       _scanEnCurso = null;
       const _usoMano = !!(_prodMano && Date.now()-_prodMano.t<90000);
       if(_verifEnvio && _verifEnvio.codigo===codigo) _verifEnvio=null;
       if(_verifOk===codigo) _verifOk=null;
       const d=await r.json();
       if(!r.ok){ _verifAnticipado=null; throw new Error(d.error||'No se pudo verificar'); }
+      if(d.resultado==='aprobacion'){
+        _prodMano = { sku: '🔑 APROBACIÓN', ean: null, aprob: codigo.trim(), t: Date.now() };
+        pintarProdMano();
+        beep(false); flashCam('warn'); mostrarFS('warn','🔑 Aprobación en mano','Escaneá la etiqueta');
+        out.innerHTML = `<div class="scan-card scan-warn"><div class="big">🔑 Aprobación en mano</div>
+          <div class="det">Ahora escaneá la <b>etiqueta del paquete</b> y sale despachado como <b>aprobado</b>, sin pedir el EAN.</div></div>`;
+        input.value=''; btn.disabled=false; reenfocar();
+        return;
+      }
       if(d.resultado==='producto'){
         _prodMano = { sku: d.sku, ean: d.ean||null, t: Date.now() };
         pintarProdMano();
@@ -2501,6 +2511,7 @@
         beep(true); flashCam('err'); mostrarFS('err','⛔ CÓDIGO INCORRECTO', `Esperaba ${esc(d.esperado_sku)||'otro producto'}`);
         out.innerHTML = `<div class="scan-card scan-cancel"><div class="big">⛔ No es el producto esperado</div>
           <div class="det">Esta etiqueta es de <b>${esc(d.esperado_sku)||'—'}</b>${d.esperado_ean?` (EAN <span class="mono">${esc(d.esperado_ean)}</span>)`:''}.<br>
+          ${d.recibido?`El servidor recibió: <span class="mono" style="background:#FDECEA;padding:1px 6px;border-radius:6px">${esc(d.recibido)}</span><br>`:''}
           Escaneá el producto correcto, el <b>código de aprobación del encargado</b>, o
           <button class="mini" onclick="cancelarVerif()">cancelá</button>.</div></div>`;
         input.value=''; btn.disabled=false; reenfocar();
