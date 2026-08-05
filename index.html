@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v73</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v74</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -851,6 +851,24 @@
       <div class="herr-tabs">
         <button class="herr-tab activa" id="herr-tab-full" onclick="verHerr('full')">📦 Impresión Envíos Full</button>
         <button class="herr-tab" id="herr-tab-etiq" onclick="verHerr('etiq')">🏷 Etiquetas de productos</button>
+        <button class="herr-tab" id="herr-tab-test" onclick="verHerr('test')">🔬 Verificador</button>
+      </div>
+
+      <div id="herr-panel-test" style="display:none">
+        <div class="card-box">
+          <h2>🔬 Verificador de productos</h2>
+          <p class="hint">Escaneá cualquier código de barras (o tipeá un SKU) y te digo <b>qué devuelve el catálogo</b> — con la misma lógica que usa Despachar. Ideal para controlar que todas las etiquetas físicas lean bien. <b>No registra nada</b>: es solo un banco de pruebas.</p>
+          <div class="verif-add">
+            <input id="test-input" placeholder="📷 Escaneá acá el código de barras…" style="flex:1; min-width:260px; font-family:'JetBrains Mono',monospace; font-size:16px; padding:13px 14px" autocomplete="off">
+          </div>
+          <div id="test-resultado"></div>
+          <div class="p-kpis" style="display:flex; gap:12px; margin:12px 0">
+            <div class="tr-num"><b id="test-ok">0</b><span>leídos OK</span></div>
+            <div class="tr-num" style="background:#FDECEA"><b id="test-mal" style="color:var(--cancel,#B3261E)">0</b><span>no encontrados</span></div>
+            <button class="btn-light" onclick="testLimpiar()" style="align-self:center">Reiniciar</button>
+          </div>
+          <div id="test-historial"></div>
+        </div>
       </div>
 
       <div id="herr-panel-etiq" style="display:none">
@@ -1445,10 +1463,55 @@
 
   // ── Herramientas: subpestañas + etiquetas de productos ──
   function verHerr(cual){
-    document.getElementById('herr-panel-full').style.display = cual==='full' ? '' : 'none';
-    document.getElementById('herr-panel-etiq').style.display = cual==='etiq' ? '' : 'none';
-    document.getElementById('herr-tab-full').classList.toggle('activa', cual==='full');
-    document.getElementById('herr-tab-etiq').classList.toggle('activa', cual==='etiq');
+    for(const k of ['full','etiq','test']){
+      document.getElementById('herr-panel-'+k).style.display = cual===k ? '' : 'none';
+      document.getElementById('herr-tab-'+k).classList.toggle('activa', cual===k);
+    }
+    if(cual==='test'){ const i=document.getElementById('test-input'); if(i){ i.value=''; i.focus(); } }
+  }
+
+  // ── Verificador (banco de pruebas del catálogo) ──
+  let _testHist = [], _testOk = 0, _testMal = 0;
+  async function testResolver(codigo){
+    const res = document.getElementById('test-resultado');
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos/resolver?codigo=${encodeURIComponent(codigo)}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      let card, fila;
+      if(d.tipo==='producto'){
+        beep(false); _testOk++;
+        card = `<div class="scan-card scan-ok"><div class="big">✅ ${esc(d.sku)}</div>
+          <div class="det">EAN <span class="mono">${esc(d.ean||'—')}</span> · leído por ${d.via==='ean'?'código de barras':'SKU tipeado'} ·
+          ${d.requiere?'<b>requiere verificación</b> al despachar':'no requiere verificación'}</div></div>`;
+        fila = { c: codigo, r: '✅ '+d.sku, ok: true };
+      } else if(d.tipo==='aprobacion'){
+        beep(false); _testOk++;
+        card = `<div class="scan-card scan-warn"><div class="big">🔑 Código de aprobación</div>
+          <div class="det">Este es tu código maestro: en Despachar aprueba cualquier paquete.</div></div>`;
+        fila = { c: codigo, r: '🔑 aprobación', ok: true };
+      } else {
+        beep(true); _testMal++;
+        card = `<div class="scan-card scan-cancel"><div class="big">❌ No está en el catálogo</div>
+          <div class="det">Leí <span class="mono">${esc(codigo).slice(0,32)}</span>${d.digitos?` (dígitos: <span class="mono">${esc(d.digitos)}</span>)`:''} y no coincide con ningún EAN ni SKU.<br>
+          Si el producto existe, cargale este EAN en ⚙ Ajustes → Verificación.</div></div>`;
+        fila = { c: codigo, r: '❌ no encontrado', ok: false };
+      }
+      res.innerHTML = card;
+      _testHist.unshift(fila); _testHist = _testHist.slice(0, 30);
+      document.getElementById('test-ok').textContent = _testOk;
+      document.getElementById('test-mal').textContent = _testMal;
+      document.getElementById('test-historial').innerHTML = _testHist.length ?
+        `<table class="tr-tabla" style="max-width:640px"><thead><tr><th>Escaneado</th><th>Resultado</th></tr></thead><tbody>`+
+        _testHist.map(h=>`<tr><td class="mono">${esc(h.c).slice(0,26)}</td><td>${esc(h.r)}</td></tr>`).join('')+'</tbody></table>' : '';
+    }catch(e){ res.innerHTML = `<div class="status err">Error: ${esc(e.message)}</div>`; }
+  }
+  function testLimpiar(){
+    _testHist=[]; _testOk=0; _testMal=0;
+    document.getElementById('test-ok').textContent='0';
+    document.getElementById('test-mal').textContent='0';
+    document.getElementById('test-historial').innerHTML='';
+    document.getElementById('test-resultado').innerHTML='';
+    const i=document.getElementById('test-input'); i.value=''; i.focus();
   }
 
   let _etProd = null;
@@ -3352,6 +3415,10 @@
   // ---------- Init: ¿hay sesión activa? ----------
   (async function(){
     document.getElementById('pass').addEventListener('keydown', e => { if(e.key==='Enter') entrar(); });
+    const ti = document.getElementById('test-input');
+    if(ti) ti.addEventListener('keydown', e => {
+      if(e.key==='Enter'){ const v = ti.value.trim(); ti.value=''; if(v) testResolver(v); }
+    });
     if(!configurado){ document.getElementById('login-cfg').style.display='block'; return; }
     let t = await token();
     if(!t && await intentarSSO()) t = await token();   // sin sesión propia → probamos el SSO del hub
