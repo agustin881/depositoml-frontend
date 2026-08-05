@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v74</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v75</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -859,8 +859,10 @@
           <h2>🔬 Verificador de productos</h2>
           <p class="hint">Escaneá cualquier código de barras (o tipeá un SKU) y te digo <b>qué devuelve el catálogo</b> — con la misma lógica que usa Despachar. Ideal para controlar que todas las etiquetas físicas lean bien. <b>No registra nada</b>: es solo un banco de pruebas.</p>
           <div class="verif-add">
-            <input id="test-input" placeholder="📷 Escaneá acá el código de barras…" style="flex:1; min-width:260px; font-family:'JetBrains Mono',monospace; font-size:16px; padding:13px 14px" autocomplete="off">
+            <input id="test-input" placeholder="Escaneá con la pistola o tipeá el código…" style="flex:1; min-width:240px; font-family:'JetBrains Mono',monospace; font-size:16px; padding:13px 14px" autocomplete="off">
+            <button class="btn-scan" id="test-cam-btn" onclick="testCamara()">📷 Cámara</button>
           </div>
+          <div id="test-reader" style="display:none; max-width:520px; border-radius:12px; overflow:hidden; margin:8px 0"></div>
           <div id="test-resultado"></div>
           <div class="p-kpis" style="display:flex; gap:12px; margin:12px 0">
             <div class="tr-num"><b id="test-ok">0</b><span>leídos OK</span></div>
@@ -1468,6 +1470,7 @@
       document.getElementById('herr-tab-'+k).classList.toggle('activa', cual===k);
     }
     if(cual==='test'){ const i=document.getElementById('test-input'); if(i){ i.value=''; i.focus(); } }
+    else if(_testCamOn){ testCamara(); }
   }
 
   // ── Verificador (banco de pruebas del catálogo) ──
@@ -1505,6 +1508,30 @@
         _testHist.map(h=>`<tr><td class="mono">${esc(h.c).slice(0,26)}</td><td>${esc(h.r)}</td></tr>`).join('')+'</tbody></table>' : '';
     }catch(e){ res.innerHTML = `<div class="status err">Error: ${esc(e.message)}</div>`; }
   }
+  let _testCamOn = false, _testUlt = '', _testUltAt = 0;
+  async function testCamara(){
+    const btn = document.getElementById('test-cam-btn');
+    const box = document.getElementById('test-reader');
+    if(_testCamOn){
+      await _pararScanner(); _testCamOn = false;
+      box.style.display='none'; btn.textContent='📷 Cámara';
+      return;
+    }
+    try{
+      box.style.display='block';
+      await _arrancarCamara('test-reader', (txt)=>{
+        const ahora = Date.now();
+        if(txt === _testUlt && ahora - _testUltAt < 2500) return;
+        _testUlt = txt; _testUltAt = ahora;
+        testResolver(String(txt).trim());
+      }, null);
+      _testCamOn = true; btn.textContent='✕ Cerrar cámara';
+    }catch(e){
+      box.style.display='none';
+      document.getElementById('test-resultado').innerHTML = '<div class="status err">No pude abrir la cámara: '+esc(e.message)+'</div>';
+    }
+  }
+
   function testLimpiar(){
     _testHist=[]; _testOk=0; _testMal=0;
     document.getElementById('test-ok').textContent='0';
