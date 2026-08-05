@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v75</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v76</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1247,6 +1247,9 @@
       const vivo = document.getElementById('view-imprimir');
       if(vivo && vivo.classList.contains('active') && !document.hidden) cargarPanel();
     }, 30000);
+    // (v76) Persistencia de pestaña activa: volver a la última que se estaba usando
+    let tabIni = null; try{ tabIni = localStorage.getItem('dep_tab'); }catch(e){}
+    if(tabIni && tabIni!=='imprimir' && tabIni!=='demo' && document.getElementById('view-'+tabIni)) verTab(tabIni);
   }
   function mostrarLogin(){
     document.getElementById('app').style.display='none';
@@ -1262,6 +1265,8 @@
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const v = document.getElementById('view-'+name);
     if(v) v.classList.add('active');
+    // (v76) Recordar la pestaña activa para volver a ella al recargar (demo no)
+    try{ if(name!=='demo') localStorage.setItem('dep_tab', name); }catch(e){}
     _detenerCamaraTodo();
     if(name === 'despachar'){
       cargarDestinos(); cargarDespachados(); cargarColectaHoy();
@@ -2655,6 +2660,9 @@
           Se escaneó el ${d.despachado_at?new Date(d.despachado_at).toLocaleString('es-AR'):'—'}${d.usuario?' por '+esc(d.usuario):''}.</div></div>`;
       } else {
         beep(false); flashCam('ok');
+        // (v76) El producto "en mano" ya se despachó con este paquete: soltarlo,
+        // así el próximo paquete pide verificar SU producto (1 producto = 1 paquete).
+        if(_usoMano){ _prodMano=null; pintarProdMano(); }
         // Suma optimista: al destino activo y al total del tipo (se corrige al refrescar)
         const dd = (_destinosData.abiertos||[]).find(x => x.id === _destinoActivo);
         if(dd) dd.cargados = (dd.cargados||0) + 1;
@@ -3721,10 +3729,10 @@
       if(!r.ok) throw new Error(d.error||'error');
       const tl = d.tipo==='ppi' ? 'Pallet' : 'Bulto';
       if(d.resultado==='ok'){
-        _verifAnticipado = null;
-        _verifPend = null; pintarVerifPend();
-        bumpContadoresLocal();
-        if(_usoMano){ _prodMano=null; pintarProdMano(); }
+        // (v76) acá había un bloque pegado por error del escaneo de Despachar:
+        // referenciaba _usoMano (variable local de escanear()) y tiraba
+        // ReferenceError → el ítem quedaba escaneado en el servidor pero la
+        // pantalla mostraba "Error" y no tildaba el chip. Eliminado.
         if(typeof beep==='function') beep(false);
         const it = efItems.find(x=>x.id===d.id); if(it) it.escaneado=true;
         efPintarColecta({total:d.total, escaneados:d.escaneados}); efRecuento();
