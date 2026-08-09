@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v76</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v77</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -2495,6 +2495,11 @@
     if(!codigo) return;
     const out=document.getElementById('scan-result');
     const btn=document.getElementById('btn-scan');
+
+    // (v77) La cámara puede re-leer LA MISMA etiqueta a los 3s (cuando vence el
+    // anti-rebote) mientras el pedido anterior todavía viaja al servidor (ML lento):
+    // la ignoramos en silencio para no registrar el paquete dos veces.
+    if(_scanEnCurso && _scanEnCurso === codigo) return;
 
     // ⚡ Ritmo rápido: si una etiqueta está viajando al servidor y escaneás el
     // producto sin esperar, lo guardamos y se verifican JUNTOS al llegar la respuesta.
