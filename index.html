@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v77</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v78</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -645,6 +645,7 @@
       <button class="tab" data-tab="despachar" onclick="verTab('despachar')">Despachar <span class="badge badge-despachar" style="display:none">0</span></button>
       <button class="tab" data-tab="seguimiento" onclick="verTab('seguimiento')">Seguimiento</button>
       <button class="tab" data-tab="full" onclick="verTab('full')">🧰 Herramientas</button>
+      <button class="tab" data-tab="wms" onclick="verTab('wms')">📦 WMS</button>
       <button class="tab" data-tab="pagos" onclick="verTab('pagos')">Pagos de envíos</button>
       <button class="tab tab-config" data-tab="config" onclick="verTab('config')">⚙</button>
     </nav>
@@ -960,6 +961,82 @@
     </div>
     </section>
 
+    <!-- ===== WMS (ubicaciones con stock) ===== -->
+    <section id="view-wms" class="view">
+      <div class="card-box" style="margin-top:0">
+        <div class="seg-head">
+          <h2>📦 WMS · ¿dónde está cada producto?</h2>
+          <button class="btn-light" onclick="wmsInit()">↻ Actualizar</button>
+        </div>
+        <div class="totals">
+          <div class="total-box"><div class="n" id="wms-t-ubis">—</div><div class="l">Ubicaciones</div></div>
+          <div class="total-box"><div class="n" id="wms-t-ocup">—</div><div class="l">Ocupadas</div></div>
+          <div class="total-box"><div class="n" id="wms-t-skus">—</div><div class="l">SKUs ubicados</div></div>
+          <div class="total-box"><div class="n" id="wms-t-uni">—</div><div class="l">Unidades</div></div>
+        </div>
+        <div class="seg-filtro" style="margin:12px 0 6px">
+          <span class="seg-filtro-lbl">Modo:</span>
+          <button class="seg-fbtn active" data-wmsm="consultar" onclick="wmsModo('consultar')">🔎 Consultar</button>
+          <button class="seg-fbtn" data-wmsm="guardar" onclick="wmsModo('guardar')">⬇ Guardar</button>
+          <button class="seg-fbtn" data-wmsm="sacar" onclick="wmsModo('sacar')">⬆ Sacar</button>
+          <button class="seg-fbtn" data-wmsm="mover" onclick="wmsModo('mover')">🔀 Mover</button>
+        </div>
+        <div class="status" id="wms-guia"></div>
+        <div class="scan-row">
+          <input id="wms-scan" placeholder="Escaneá el producto (EAN) o la etiqueta del rack (UB:…)" autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){ wmsEscanear(this.value); this.value=''; }">
+          <button class="btn-scan" onclick="var i=document.getElementById('wms-scan'); wmsEscanear(i.value); i.value=''; i.focus();">Leer</button>
+        </div>
+        <div class="scan-modos">
+          <button id="wms-cam-btn" class="scan-modo-btn" onclick="wmsCamara()">📷 Escanear con cámara</button>
+        </div>
+        <div id="wms-reader-wrap" style="display:none; max-width:420px; margin:10px auto"><div id="wms-reader"></div></div>
+        <div id="wms-panes" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-top:12px">
+          <div id="wms-pane-prod"></div>
+          <div id="wms-pane-ubi"></div>
+        </div>
+        <div id="wms-accion" style="margin-top:12px"></div>
+        <div id="wms-resultado" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card-box">
+        <h2>🔎 Buscar por SKU</h2>
+        <div class="verif-add">
+          <input id="wms-buscar" placeholder="Parte del SKU… (ej. OFI210)" style="flex:1; min-width:220px"
+                 oninput="clearTimeout(window._wmsBT); window._wmsBT=setTimeout(wmsBuscar, 350)">
+        </div>
+        <div id="wms-buscar-out"></div>
+      </div>
+
+      <div class="card-box" id="wms-ubis-card">
+        <div class="seg-head">
+          <h2>🏗 Ubicaciones (racks)</h2>
+          <button class="btn-light" onclick="wmsCargarUbis()">↻</button>
+        </div>
+        <p class="hint">Creá un rack completo de una: rack <b>A</b> con <b>3</b> columnas y <b>4</b> estantes genera A-01-1 … A-03-4. Después imprimí las etiquetas y pegalas en los estantes. El código de barras lleva el prefijo <b>UB:</b> para que nunca se confunda con un producto.</p>
+        <div class="verif-add">
+          <input id="wms-rack" placeholder="Rack (ej. A)" maxlength="6" style="width:110px; text-transform:uppercase">
+          <label>Columnas <input type="number" id="wms-cols" value="3" min="1" max="60" style="width:70px"></label>
+          <label>Estantes <input type="number" id="wms-est" value="4" min="1" max="20" style="width:70px"></label>
+          <button class="btn-scan" onclick="wmsCrearRack()">Crear rack</button>
+        </div>
+        <div class="verif-add">
+          <input id="wms-ubi-libre" placeholder="…o una ubicación suelta (ej. PISO-FONDO-1)" maxlength="24" style="flex:1; min-width:220px; text-transform:uppercase">
+          <button class="btn-light" onclick="wmsCrearLibre()">Crear</button>
+        </div>
+        <div class="status" id="wms-ubis-status"></div>
+        <div id="wms-ubis-lista"></div>
+      </div>
+
+      <div class="card-box">
+        <div class="seg-head">
+          <h2>📜 Últimos movimientos</h2>
+          <button class="btn-light" onclick="wmsCargarMovs()">↻</button>
+        </div>
+        <div id="wms-movs"><div class="status">—</div></div>
+      </div>
+    </section>
+
     <section id="view-pagos" class="view">
       <div class="card-box">
         <div class="seg-head">
@@ -1089,6 +1166,10 @@
     <button class="navbtn" data-tab="full" onclick="verTab('full')">
       <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
       Herram.
+    </button>
+    <button class="navbtn" data-tab="wms" onclick="verTab('wms')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      WMS
     </button>
     <button class="navbtn" data-tab="pagos" onclick="verTab('pagos')">
       <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
@@ -1274,6 +1355,7 @@
     }
     if(name === 'imprimir') cargarSeparables();
     if(name === 'pagos') cargarTransportes();
+    if(name === 'wms') wmsInit();
     if(name === 'seguimiento'){
       const hf=document.getElementById('hist-fecha'); if(hf && !hf.value) hf.value=fechaHoyLocal();
       if(!document.getElementById('seg-board').innerHTML) cargarSeguimiento();
@@ -2352,7 +2434,7 @@
   function _detenerCamaraTodo(){
     if(!_camScanner) return;
     _pararScanner();
-    [['btn-cam','cam-wrap','btn-luz'],['btn-cam-seg','cam-wrap-seg','btn-luz-seg']].forEach(([b,w,l])=>{
+    [['btn-cam','cam-wrap','btn-luz'],['btn-cam-seg','cam-wrap-seg','btn-luz-seg'],['wms-cam-btn','wms-reader-wrap','wms-luz-x']].forEach(([b,w,l])=>{
       const bb=document.getElementById(b); if(bb){ bb.textContent='📷 Escanear con cámara'; bb.classList.remove('activo'); }
       const ww=document.getElementById(w); if(ww) ww.style.display='none';
       const ll=document.getElementById(l); if(ll) ll.style.display='none';
@@ -3426,6 +3508,330 @@
       st.className='status ok'; st.textContent='Datos de prueba eliminados.';
       document.getElementById('demo-guia').innerHTML='';
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  // ---------- WMS · ubicaciones con stock ----------
+  let _wmsModoAct = 'consultar';
+  let _wmsProd = null;    // {sku, ean, en_catalogo, total, ubicaciones[]}
+  let _wmsUbi = null;     // ubicación escaneada (en Mover: el DESTINO)
+  let _wmsDesde = null;   // solo en Mover: la ubicación de ORIGEN
+  let _wmsUbisData = [];
+  let _wmsUltCam = '', _wmsUltCamAt = 0;
+
+  function wmsInit(){
+    wmsCargarResumen(); wmsCargarUbis(); wmsCargarMovs();
+    // La gestión de racks es solo para quien ve Ajustes
+    const card = document.getElementById('wms-ubis-card');
+    if(card && _pestPermitidas && !_pestPermitidas.includes('config')) card.style.display='none';
+    wmsGuia();
+    setTimeout(()=>{ const i=document.getElementById('wms-scan'); if(i) i.focus(); }, 60);
+  }
+
+  async function wmsCargarResumen(){
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/resumen`); const d = await r.json();
+      if(!r.ok) return;
+      document.getElementById('wms-t-ubis').textContent = d.ubicaciones;
+      document.getElementById('wms-t-ocup').textContent = d.ocupadas;
+      document.getElementById('wms-t-skus').textContent = d.skus;
+      document.getElementById('wms-t-uni').textContent = d.unidades;
+    }catch(e){}
+  }
+
+  function wmsModo(m){
+    _wmsModoAct = m;
+    document.querySelectorAll('[data-wmsm]').forEach(b=>b.classList.toggle('active', b.dataset.wmsm===m));
+    _wmsDesde = null; _wmsUbi = null;
+    document.getElementById('wms-resultado').innerHTML='';
+    wmsPintar(); wmsGuia();
+    const i=document.getElementById('wms-scan'); if(i) i.focus();
+  }
+
+  function wmsGuia(){
+    const g = document.getElementById('wms-guia'); if(!g) return;
+    const msgs = {
+      consultar: 'Escaneá cualquier cosa: un producto te dice DÓNDE está; una etiqueta de rack te dice QUÉ tiene.',
+      guardar:  'Escaneá el PRODUCTO y el RACK (en cualquier orden), poné la cantidad y confirmá.',
+      sacar:    'Escaneá el PRODUCTO y el RACK del que lo sacás, poné la cantidad y confirmá.',
+      mover:    'Escaneá el PRODUCTO, después el rack de ORIGEN, después el de DESTINO, y confirmá.'
+    };
+    g.className='status'; g.textContent = msgs[_wmsModoAct] || '';
+  }
+
+  async function wmsEscanear(valor){
+    const codigo = String(valor||'').trim();
+    if(!codigo) return;
+    const res = document.getElementById('wms-resultado');
+    res.innerHTML = '<div class="status">Leyendo…</div>';
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/resolver?codigo=${encodeURIComponent(codigo)}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      res.innerHTML='';
+      if(d.tipo==='producto'){
+        beep(false);
+        _wmsProd = d;
+      } else if(d.tipo==='ubicacion'){
+        beep(false);
+        if(_wmsModoAct==='mover'){
+          if(!_wmsDesde) _wmsDesde = d;
+          else if(d.codigo === _wmsDesde.codigo){ res.innerHTML='<div class="status err">Esa ya es la ubicación de ORIGEN. Escaneá el rack de DESTINO.</div>'; }
+          else _wmsUbi = d;
+        } else {
+          _wmsUbi = d;
+        }
+      } else if(d.tipo==='ubicacion_desconocida'){
+        beep(true);
+        res.innerHTML = `<div class="scan-card scan-warn"><div class="big">La ubicación ${esc(d.codigo)} no existe</div>
+          <div class="det">Creala en la sección Ubicaciones de abajo, o revisá la etiqueta del rack.</div></div>`;
+      } else {
+        beep(true);
+        res.innerHTML = `<div class="scan-card scan-cancel"><div class="big">No reconozco ese código</div>
+          <div class="det">Leí <span class="mono">${esc(codigo).slice(0,32)}</span> y no es ni un EAN/SKU del catálogo, ni un SKU con stock, ni una etiqueta de rack (UB:…).</div></div>`;
+      }
+      wmsPintar();
+    }catch(e){ beep(true); res.innerHTML = `<div class="status err">Error: ${esc(e.message)}</div>`; }
+  }
+
+  function wmsPintar(){
+    const pp = document.getElementById('wms-pane-prod');
+    const pu = document.getElementById('wms-pane-ubi');
+    const pa = document.getElementById('wms-accion');
+    if(!pp || !pu || !pa) return;
+    // — Ficha del producto —
+    if(_wmsProd){
+      const ubis = (_wmsProd.ubicaciones||[]);
+      const filas = ubis.length
+        ? ubis.map(u=>`<div class="row r4"><span class="sku mono">${esc(u.ubicacion)}</span><span class="ti"></span><span class="u">×${u.cantidad}</span></div>`).join('')
+        : '<div class="status">Todavía sin ubicación asignada.</div>';
+      pp.innerHTML = `<div class="scan-card scan-ok" style="margin:0"><div class="big">📦 ${esc(_wmsProd.sku)}
+          <button class="mini" onclick="_wmsProd=null; wmsPintar();" style="float:right">✕</button></div>
+        <div class="det">EAN <span class="mono">${esc(_wmsProd.ean||'—')}</span>${_wmsProd.en_catalogo?'':' · <b>no está en el catálogo</b>'} · total ubicado: <b>${_wmsProd.total||0}</b></div>
+        <div class="list" style="margin-top:8px">${filas}</div></div>`;
+    } else pp.innerHTML = '';
+    // — Ficha de ubicación(es) —
+    let hu = '';
+    const fichaUbi = (u, titulo, extra) => {
+      const filas = (u.contenido||[]).length
+        ? u.contenido.map(c=>`<div class="row r4"><span class="sku">${esc(c.sku)}</span><span class="ti"></span><span class="u">×${c.cantidad}</span></div>`).join('')
+        : '<div class="status">Vacía.</div>';
+      return `<div class="scan-card scan-warn" style="margin:0 0 10px"><div class="big">${titulo} ${esc(u.codigo)}${extra||''}</div>
+        <div class="list" style="margin-top:8px">${filas}</div></div>`;
+    };
+    if(_wmsModoAct==='mover'){
+      if(_wmsDesde) hu += fichaUbi(_wmsDesde, '🅰 Origen:', ` <button class="mini" onclick="_wmsDesde=null; wmsPintar();">✕</button>`);
+      if(_wmsUbi)   hu += fichaUbi(_wmsUbi, '🅱 Destino:', ` <button class="mini" onclick="_wmsUbi=null; wmsPintar();">✕</button>`);
+    } else if(_wmsUbi){
+      hu = fichaUbi(_wmsUbi, '📍 Rack', ` <button class="mini" onclick="_wmsUbi=null; wmsPintar();">✕</button>`);
+    }
+    pu.innerHTML = hu;
+    // — Panel de acción según el modo —
+    let listo = false, texto = '', tipo = '';
+    if(_wmsModoAct==='guardar' && _wmsProd && _wmsUbi){ listo=true; tipo='entrada'; texto=`⬇ Guardar en ${esc(_wmsUbi.codigo)}`; }
+    if(_wmsModoAct==='sacar' && _wmsProd && _wmsUbi){ listo=true; tipo='salida'; texto=`⬆ Sacar de ${esc(_wmsUbi.codigo)}`; }
+    if(_wmsModoAct==='mover' && _wmsProd && _wmsDesde && _wmsUbi){ listo=true; tipo='mover'; texto=`🔀 Mover ${esc(_wmsDesde.codigo)} → ${esc(_wmsUbi.codigo)}`; }
+    if(listo){
+      pa.innerHTML = `<div class="scan-card" style="margin:0; background:#F7FAFF; border:1px solid #C7DBF7">
+        <div class="det" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <b>${esc(_wmsProd.sku)}</b> · Cantidad:
+          <button class="mini" onclick="wmsCant(-1)">−</button>
+          <input id="wms-cant" type="number" min="1" max="99999" value="1" style="width:80px; font-size:18px; font-weight:800; text-align:center; padding:8px"
+                 onkeydown="if(event.key==='Enter') wmsConfirmar('${tipo}')">
+          <button class="mini" onclick="wmsCant(1)">+</button>
+          <button class="btn-scan" onclick="wmsConfirmar('${tipo}')">${texto}</button>
+        </div></div>`;
+    } else pa.innerHTML = '';
+  }
+  function wmsCant(d){
+    const i = document.getElementById('wms-cant'); if(!i) return;
+    i.value = Math.max(1, (parseInt(i.value)||1) + d);
+  }
+
+  async function wmsConfirmar(tipo){
+    const res = document.getElementById('wms-resultado');
+    const cantidad = parseInt((document.getElementById('wms-cant')||{}).value)||1;
+    const body = { sku: _wmsProd ? _wmsProd.sku : '', cantidad };
+    if(tipo==='mover'){ body.desde = _wmsDesde.codigo; body.hacia = _wmsUbi.codigo; }
+    else body.ubicacion = _wmsUbi.codigo;
+    res.innerHTML = '<div class="status">Registrando…</div>';
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/${tipo}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      beep(false);
+      let msg = '';
+      if(tipo==='entrada') msg = `✓ ${cantidad}× ${esc(d.sku)} guardadas en <b>${esc(d.ubicacion)}</b> (ahí quedan ${d.queda_en_ubicacion}).`;
+      if(tipo==='salida')  msg = `✓ ${cantidad}× ${esc(d.sku)} sacadas de <b>${esc(d.ubicacion)}</b> (ahí quedan ${d.queda_en_ubicacion}).`;
+      if(tipo==='mover')   msg = `✓ ${cantidad}× ${esc(d.sku)} movidas <b>${esc(d.desde)} → ${esc(d.hacia)}</b>.`;
+      res.innerHTML = `<div class="status ok">${msg} Escaneá el próximo producto.</div>`;
+      // El producto se "suelta"; el rack queda en pantalla para seguir cargando ahí
+      _wmsProd = null; _wmsDesde = null;
+      if(_wmsUbi) wmsRefrescarUbi(_wmsUbi.codigo);
+      wmsPintar(); wmsCargarResumen();
+      const i=document.getElementById('wms-scan'); if(i){ i.value=''; i.focus(); }
+    }catch(e){
+      beep(true);
+      res.innerHTML = `<div class="scan-card scan-cancel"><div class="big">No se registró</div><div class="det">${esc(e.message)}</div></div>`;
+    }
+  }
+  async function wmsRefrescarUbi(codigo){
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/resolver?codigo=${encodeURIComponent('UB:'+codigo)}`);
+      const d = await r.json();
+      if(r.ok && d.tipo==='ubicacion'){
+        if(_wmsUbi && _wmsUbi.codigo===codigo) _wmsUbi = d;
+        if(_wmsDesde && _wmsDesde.codigo===codigo) _wmsDesde = d;
+        wmsPintar();
+      }
+    }catch(e){}
+  }
+
+  async function wmsBuscar(){
+    const out = document.getElementById('wms-buscar-out');
+    const q = (document.getElementById('wms-buscar').value||'').trim();
+    if(!q){ out.innerHTML=''; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/buscar?q=${encodeURIComponent(q)}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      if(!(d.resultados||[]).length){ out.innerHTML='<div class="status">Ningún SKU con stock coincide.</div>'; return; }
+      out.innerHTML = `<table class="tr-tabla"><thead><tr><th>SKU</th><th>Total</th><th>Dónde</th></tr></thead><tbody>`+
+        d.resultados.map(x=>`<tr><td><b>${esc(x.sku)}</b></td><td>${x.total}</td>
+          <td>${x.ubicaciones.map(u=>`<span class="pill mono">${esc(u.ubicacion)} ×${u.cantidad}</span>`).join(' ')}</td></tr>`).join('')+'</tbody></table>';
+    }catch(e){ out.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  async function wmsCargarUbis(){
+    const cont = document.getElementById('wms-ubis-lista'); if(!cont) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'');
+      _wmsUbisData = d.ubicaciones || [];
+      if(!_wmsUbisData.length){ cont.innerHTML='<div class="status">Todavía no hay ubicaciones. Creá el primer rack arriba.</div>'; return; }
+      const racks = new Map();
+      for(const u of _wmsUbisData){
+        let e = racks.get(u.rack);
+        if(!e){ e = { rack: u.rack, ubis: [], unidades: 0 }; racks.set(u.rack, e); }
+        e.ubis.push(u); e.unidades += (u.unidades||0);
+      }
+      cont.innerHTML = [...racks.values()].map(rk=>{
+        const filas = rk.ubis.map(u=>`<div class="row r4"><span class="sku mono">${esc(u.codigo)}</span>
+          <span class="ti">${u.skus?`${u.skus} SKU(s)`:'<i style="color:var(--muted2)">vacía</i>'}</span>
+          <span class="u">${u.unidades?('×'+u.unidades):''}</span></div>`).join('');
+        return `<details class="seg-sec"><summary>
+          <span class="seg-tit">Rack <b>${esc(rk.rack)}</b> · ${rk.ubis.length} ubicaciones · ${rk.unidades} unidades</span>
+          <span style="margin-left:auto; display:flex; gap:6px">
+            <button class="mini" onclick="event.preventDefault(); wmsImprimirRack('${esc(rk.rack)}')">🖨 Etiquetas</button>
+            <button class="mini del" onclick="event.preventDefault(); wmsBorrarRack('${esc(rk.rack)}')">Borrar</button>
+          </span></summary>
+          <div class="list">${filas}</div></details>`;
+      }).join('');
+    }catch(e){ cont.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  async function wmsCrearRack(){
+    const st = document.getElementById('wms-ubis-status');
+    const rack = (document.getElementById('wms-rack').value||'').trim().toUpperCase();
+    const columnas = parseInt(document.getElementById('wms-cols').value)||0;
+    const estantes = parseInt(document.getElementById('wms-est').value)||0;
+    if(!rack){ st.className='status err'; st.textContent='Poné el nombre del rack (ej. A).'; return; }
+    st.className='status'; st.textContent='Creando…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({rack, columnas, estantes}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent=`✓ Rack ${rack}: ${d.creadas} ubicaciones aseguradas (${rack}-01-1 … ${rack}-${String(columnas).padStart(2,'0')}-${estantes}). Ahora imprimí las etiquetas.`;
+      document.getElementById('wms-rack').value='';
+      wmsCargarUbis(); wmsCargarResumen();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+  async function wmsCrearLibre(){
+    const st = document.getElementById('wms-ubis-status');
+    const codigo = (document.getElementById('wms-ubi-libre').value||'').trim().toUpperCase();
+    if(!codigo){ st.className='status err'; st.textContent='Escribí el código de la ubicación.'; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent=`✓ Ubicación ${codigo} creada.`;
+      document.getElementById('wms-ubi-libre').value='';
+      wmsCargarUbis(); wmsCargarResumen();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+  async function wmsBorrarRack(rack){
+    if(!confirm(`¿Borrar TODAS las ubicaciones del rack ${rack}? Solo se puede si están vacías (sin stock).`)) return;
+    const st = document.getElementById('wms-ubis-status');
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones/borrar`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({rack}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent=`✓ Rack ${rack}: ${d.borradas} ubicaciones borradas.`;
+      wmsCargarUbis(); wmsCargarResumen();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  function wmsImprimirRack(rack){
+    const st = document.getElementById('wms-ubis-status');
+    if(typeof JsBarcode === 'undefined'){ st.className='status err'; st.textContent='No cargó el generador de códigos. Recargá la página.'; return; }
+    const ubis = _wmsUbisData.filter(u=>u.rack===rack);
+    if(!ubis.length) return;
+    const w = window.open('', '_blank', 'width=560,height=760');
+    let paginas = '';
+    ubis.forEach((u,i)=>{ paginas += `<div class="lab"><div class="cod">${esc(u.codigo)}</div><svg id="ub${i}"></svg></div>`; });
+    w.document.write(`<html><head><title>Etiquetas rack ${esc(rack)}</title><style>
+      @page{ size:50mm 25mm; margin:0 }
+      *{ box-sizing:border-box } body{ margin:0; font-family:'Segoe UI',Arial,sans-serif; color:#000 }
+      .lab{ width:50mm; height:25mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1mm; overflow:hidden }
+      .cod{ font-size:6.5mm; font-weight:900; letter-spacing:.5mm; line-height:1 }
+      svg{ width:46mm; height:14mm; margin-top:1mm }
+      .print-btn{ position:fixed; top:6px; right:6px; padding:10px 18px; font-size:15px; cursor:pointer }
+      @media print{ .print-btn{ display:none } }
+    </style></head><body>${paginas}<button class="print-btn" onclick="window.print()">🖨 Imprimir</button></body></html>`);
+    w.document.close();
+    setTimeout(()=>{
+      try{ ubis.forEach((u,i)=>{ JsBarcode(w.document.getElementById('ub'+i), 'UB:'+u.codigo, {format:'CODE128', width:1.6, height:44, displayValue:false, margin:0}); }); }
+      catch(e){ st.className='status err'; st.textContent='No pude generar los códigos: '+esc(e.message); return; }
+      st.className='status ok'; st.textContent=`✓ ${ubis.length} etiqueta(s) del rack ${rack} listas (5×2,5 cm).`;
+    }, 350);
+  }
+
+  async function wmsCargarMovs(){
+    const cont = document.getElementById('wms-movs'); if(!cont) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/movimientos`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'');
+      if(!(d.movimientos||[]).length){ cont.innerHTML='<div class="status">Todavía no hay movimientos.</div>'; return; }
+      const ICO = { entrada:'⬇', salida:'⬆', mover:'🔀' };
+      cont.innerHTML = `<table class="tr-tabla"><thead><tr><th>Cuándo</th><th>Qué</th><th>SKU</th><th>Cant.</th><th>Dónde</th><th>Quién</th></tr></thead><tbody>`+
+        d.movimientos.map(m=>{
+          const f = m.hecho_at ? new Date(m.hecho_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+          const donde = m.tipo==='mover' ? `${esc(m.desde||'—')} → ${esc(m.hacia||'—')}` : esc(m.hacia||m.desde||'—');
+          return `<tr><td>${f}</td><td>${ICO[m.tipo]||''} ${esc(m.tipo)}</td><td><b>${esc(m.sku)}</b></td><td>${m.cantidad}</td>
+            <td class="mono">${donde}</td><td>${m.usuario?esc(m.usuario.split('@')[0]):'—'}</td></tr>`;
+        }).join('')+'</tbody></table>';
+    }catch(e){ cont.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  async function wmsCamara(){
+    const wrap = document.getElementById('wms-reader-wrap');
+    const btn = document.getElementById('wms-cam-btn');
+    if(_camScanner){
+      await _pararScanner();
+      wrap.style.display='none'; btn.textContent='📷 Escanear con cámara'; btn.classList.remove('activo');
+      return;
+    }
+    if(typeof Html5Qrcode === 'undefined'){
+      document.getElementById('wms-resultado').innerHTML = '<div class="status err">No cargó el lector de cámara. Recargá la página.</div>';
+      return;
+    }
+    wrap.style.display='block';
+    btn.textContent='✕ Cerrar cámara'; btn.classList.add('activo');
+    try{
+      await _arrancarCamara('wms-reader', (txt)=>{
+        const ahora = Date.now();
+        if(txt === _wmsUltCam && ahora - _wmsUltCamAt < 2500) return;
+        _wmsUltCam = txt; _wmsUltCamAt = ahora;
+        wmsEscanear(String(txt).trim());
+      }, null);
+    }catch(e){
+      wrap.style.display='none'; btn.textContent='📷 Escanear con cámara'; btn.classList.remove('activo');
+      document.getElementById('wms-resultado').innerHTML = '<div class="status err">No pude abrir la cámara: '+esc(e.message)+'</div>';
+      _camScanner = null;
+    }
   }
 
   // ---------- SSO con Pontec OS: si estamos embebidos en el hub, pedirle la sesión ----------
