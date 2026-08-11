@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v78</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v79</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -961,8 +961,16 @@
     </div>
     </section>
 
-    <!-- ===== WMS (ubicaciones con stock) ===== -->
+    <!-- ===== WMS (plano + picking/reserva + stock) ===== -->
     <section id="view-wms" class="view">
+      <div class="herr-tabs">
+        <button class="herr-tab activa" id="wms-tab-operar" onclick="wmsVer('operar')">🔫 Operar</button>
+        <button class="herr-tab" id="wms-tab-plano" onclick="wmsVer('plano')">🗺 Plano</button>
+        <button class="herr-tab" id="wms-tab-reposicion" onclick="wmsVer('reposicion')">⬇ Reposición <span id="wms-repo-badge" class="badge badge-despachar" style="display:none">0</span></button>
+        <button class="herr-tab" id="wms-tab-movimientos" onclick="wmsVer('movimientos')">📜 Movimientos</button>
+        <button class="herr-tab" id="wms-tab-ajustes" onclick="wmsVer('ajustes')">⚙ Ajustes</button>
+      </div>
+      <div id="wms-panel-operar">
       <div class="card-box" style="margin-top:0">
         <div class="seg-head">
           <h2>📦 WMS · ¿dónde está cada producto?</h2>
@@ -1007,33 +1015,91 @@
         </div>
         <div id="wms-buscar-out"></div>
       </div>
-
-      <div class="card-box" id="wms-ubis-card">
-        <div class="seg-head">
-          <h2>🏗 Ubicaciones (racks)</h2>
-          <button class="btn-light" onclick="wmsCargarUbis()">↻</button>
-        </div>
-        <p class="hint">Creá un rack completo de una: rack <b>A</b> con <b>3</b> columnas y <b>4</b> estantes genera A-01-1 … A-03-4. Después imprimí las etiquetas y pegalas en los estantes. El código de barras lleva el prefijo <b>UB:</b> para que nunca se confunda con un producto.</p>
-        <div class="verif-add">
-          <input id="wms-rack" placeholder="Rack (ej. A)" maxlength="6" style="width:110px; text-transform:uppercase">
-          <label>Columnas <input type="number" id="wms-cols" value="3" min="1" max="60" style="width:70px"></label>
-          <label>Estantes <input type="number" id="wms-est" value="4" min="1" max="20" style="width:70px"></label>
-          <button class="btn-scan" onclick="wmsCrearRack()">Crear rack</button>
-        </div>
-        <div class="verif-add">
-          <input id="wms-ubi-libre" placeholder="…o una ubicación suelta (ej. PISO-FONDO-1)" maxlength="24" style="flex:1; min-width:220px; text-transform:uppercase">
-          <button class="btn-light" onclick="wmsCrearLibre()">Crear</button>
-        </div>
-        <div class="status" id="wms-ubis-status"></div>
-        <div id="wms-ubis-lista"></div>
       </div>
 
-      <div class="card-box">
+      <div class="card-box" id="wms-panel-plano" style="display:none">
+        <div class="seg-head">
+          <h2>🗺 Plano del depósito</h2>
+          <button class="btn-light" onclick="wmsPlanoCargar()">↻</button>
+        </div>
+        <p class="hint">Como en Excel: elegí (o creá) un módulo y <b>pintá los cuadrados</b> donde está en tu depósito — cada cuadrado es UNA columna del módulo. Pasá el mouse por cualquier cuadrado para ver <b>qué mercadería hay ahí</b>; click para el detalle completo. Tipos: <b>Rack selectivo</b> (nivel 1 picking · arriba reserva 🚫) · <b>Rack penetrable</b> (ídem + un solo SKU por calle) · <b>Estantería</b> (todo picking) · <b>Piso</b> (pallets abiertos, picking).</p>
+        <div class="verif-add" id="wms-mod-form">
+          <select id="wms-mod-sel" onchange="wmsModElegir(this.value)" style="min-width:150px"><option value="">＋ Módulo nuevo…</option></select>
+          <input id="wms-mod-nombre" placeholder="Nombre (ej. A)" maxlength="8" style="width:110px; text-transform:uppercase">
+          <select id="wms-mod-tipo" onchange="wmsModTipoCambio()">
+            <option value="selectivo">Rack selectivo</option>
+            <option value="penetrable">Rack penetrable</option>
+            <option value="estanteria">Estantería</option>
+            <option value="piso">Piso (pallets)</option>
+          </select>
+          <label>Niveles <input type="number" id="wms-mod-niveles" value="4" min="1" max="10" style="width:60px"></label>
+          <label>Tope <input type="number" id="wms-mod-kg" placeholder="kg" min="0" step="50" style="width:80px"> kg</label>
+        </div>
+        <div class="verif-add">
+          <button class="btn-scan" id="wms-btn-pintar" onclick="wmsModoPintar('pintar')">🖌 Pintar celdas</button>
+          <button class="btn-light" id="wms-btn-borrarcel" onclick="wmsModoPintar('borrar')">🧽 Borrar celdas</button>
+          <button class="btn-scan" onclick="wmsModGuardar()" style="background:var(--ok,#2F9E44)">💾 Guardar módulo</button>
+          <button class="btn-light" onclick="wmsEtiquetasModulo()">🖨 Etiquetas ubicaciones</button>
+          <button class="btn-light" onclick="wmsEtiquetaRack()">🖨 Etiqueta del RACK</button>
+          <button class="mini del" onclick="wmsModBorrar()" style="margin-left:auto">Borrar módulo</button>
+        </div>
+        <div class="status" id="wms-plano-status"></div>
+        <div id="wms-grid-wrap" style="overflow:auto; border:1px solid var(--line,#E5E1D8); border-radius:10px; background:#FBFAF7; padding:8px">
+          <div id="wms-grid"></div>
+        </div>
+        <div id="wms-mod-detalle" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card-box" id="wms-panel-reposicion" style="display:none">
+        <div class="seg-head">
+          <h2>⬇ Reposición · bajar de reserva a picking</h2>
+          <button class="btn-light" onclick="wmsRepoCargar()">↻</button>
+        </div>
+        <p class="hint">Productos cuyo <b>picking</b> quedó por debajo del mínimo y tienen pallets en <b>reserva</b>: hay que bajarlos. La bajada física se registra en <b>Operar → modo Mover</b> (escaneás producto, rack de origen y rack de destino).</p>
+        <div class="status" id="wms-repo-status"></div>
+        <div id="wms-repo-lista"><div class="status">—</div></div>
+      </div>
+
+      <div class="card-box" id="wms-panel-movimientos" style="display:none">
         <div class="seg-head">
           <h2>📜 Últimos movimientos</h2>
           <button class="btn-light" onclick="wmsCargarMovs()">↻</button>
         </div>
         <div id="wms-movs"><div class="status">—</div></div>
+      </div>
+
+      <div class="card-box" id="wms-panel-ajustes" style="display:none">
+        <h2>⚙ Ajustes del WMS</h2>
+        <div class="verif-add" style="background:#F7FAFF; border:1px solid #C7DBF7; border-radius:10px; padding:10px">
+          <b style="font-size:13px">⬇ Mínimo de picking:</b>
+          <input type="number" id="wms-aj-min" min="0" max="999" style="width:80px">
+          <span class="hint" style="margin:0">unidades — cuando el picking de un SKU baja de acá (y hay reserva), aparece en Reposición.</span>
+          <button class="btn-light" onclick="wmsAjustesGuardar()">Guardar</button>
+        </div>
+        <div class="status" id="wms-aj-status"></div>
+
+        <h2 style="margin-top:18px">⚖ Pesos por producto (para el tope de kg)</h2>
+        <p class="hint">Cargale el peso a los SKUs pesados: si un módulo tiene tope de kg, el sistema frena las entradas que lo superarían. Los SKUs sin peso no cuentan para el tope.</p>
+        <div class="verif-add">
+          <input id="wms-peso-buscar" placeholder="🔎 Buscar SKU…" style="flex:1; min-width:200px"
+                 oninput="clearTimeout(window._wmsPT); window._wmsPT=setTimeout(wmsPesosCargar, 350)">
+        </div>
+        <div id="wms-pesos-lista"></div>
+
+        <div id="wms-perm-card">
+        <h2 style="margin-top:18px">👥 Quién ve cada subpestaña del WMS</h2>
+        <p class="hint">Sin fila acá, un usuario ve <b>Operar</b> y <b>Reposición</b>. Quien tiene Ajustes (⚙ config) ve todo siempre. Marcá qué subpestañas ve cada email del equipo.</p>
+        <div class="verif-add">
+          <input id="wms-perm-email" placeholder="email@pontecsa.com" style="min-width:220px">
+          <label><input type="checkbox" class="wms-perm-chk" value="operar" checked> Operar</label>
+          <label><input type="checkbox" class="wms-perm-chk" value="plano"> Plano</label>
+          <label><input type="checkbox" class="wms-perm-chk" value="reposicion" checked> Reposición</label>
+          <label><input type="checkbox" class="wms-perm-chk" value="movimientos"> Movimientos</label>
+          <label><input type="checkbox" class="wms-perm-chk" value="ajustes"> Ajustes</label>
+          <button class="btn-light" onclick="wmsPermGuardar()">Guardar</button>
+        </div>
+        <div id="wms-perm-lista"></div>
+        </div>
       </div>
     </section>
 
@@ -3510,21 +3576,52 @@
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
   }
 
-  // ---------- WMS · ubicaciones con stock ----------
+  // ---------- WMS v2 · plano + picking/reserva + stock ----------
   let _wmsModoAct = 'consultar';
-  let _wmsProd = null;    // {sku, ean, en_catalogo, total, ubicaciones[]}
+  let _wmsProd = null;    // {sku, ean, en_catalogo, total, picking, reserva, ubicaciones[]}
   let _wmsUbi = null;     // ubicación escaneada (en Mover: el DESTINO)
   let _wmsDesde = null;   // solo en Mover: la ubicación de ORIGEN
-  let _wmsUbisData = [];
+  let _wmsUbisData = [];  // ubicaciones con stock agregado (etiquetas + detalle)
   let _wmsUltCam = '', _wmsUltCamAt = 0;
+  let _wmsPest = null;          // subpestañas del WMS que ve este usuario
+  let _wmsMods = [];            // módulos del plano (con celdas)
+  let _wmsStockMapa = new Map();// ubicacion → [{sku,cantidad}] (hover del plano)
+  let _wmsSel = null;           // módulo en edición (objeto o null = nuevo)
+  let _wmsCeldasTmp = [];       // celdas del módulo en edición [{f,c,n}]
+  let _wmsPintarModo = null;    // 'pintar' | 'borrar' | null
+  const WMS_GRID_F = 22, WMS_GRID_C = 36;
+  const WMS_TIPO_NOMBRE = { selectivo:'Rack selectivo', penetrable:'Rack penetrable', estanteria:'Estantería', piso:'Piso' };
+  const WMS_TIPO_COLOR  = { selectivo:'#E8890C', penetrable:'#D63B2F', estanteria:'#1C6DD0', piso:'#2F9E44' };
 
-  function wmsInit(){
-    wmsCargarResumen(); wmsCargarUbis(); wmsCargarMovs();
-    // La gestión de racks es solo para quien ve Ajustes
-    const card = document.getElementById('wms-ubis-card');
-    if(card && _pestPermitidas && !_pestPermitidas.includes('config')) card.style.display='none';
-    wmsGuia();
-    setTimeout(()=>{ const i=document.getElementById('wms-scan'); if(i) i.focus(); }, 60);
+  async function wmsInit(){
+    // ¿Qué subpestañas ve este usuario? (config ve todas)
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/mis-pestanas`);
+      const d = await r.json();
+      _wmsPest = (r.ok && d.pestanas && d.pestanas.length) ? d.pestanas : ['operar'];
+    }catch(e){ _wmsPest = ['operar']; }
+    for(const p of ['operar','plano','reposicion','movimientos','ajustes']){
+      const b = document.getElementById('wms-tab-'+p);
+      if(b) b.style.display = _wmsPest.includes(p) ? '' : 'none';
+    }
+    wmsCargarResumen(); wmsCargarUbis();
+    if(_wmsPest.includes('reposicion')) wmsRepoCargar(true); // el numerito del badge
+    wmsVer(_wmsPest[0] || 'operar');
+  }
+
+  function wmsVer(p){
+    if(_wmsPest && !_wmsPest.includes(p)) return;
+    for(const k of ['operar','plano','reposicion','movimientos','ajustes']){
+      const pan = document.getElementById('wms-panel-'+k);
+      if(pan) pan.style.display = (k===p) ? '' : 'none';
+      const tab = document.getElementById('wms-tab-'+k);
+      if(tab) tab.classList.toggle('activa', k===p);
+    }
+    if(p==='operar'){ wmsGuia(); setTimeout(()=>{ const i=document.getElementById('wms-scan'); if(i) i.focus(); }, 60); }
+    if(p==='plano') wmsPlanoCargar();
+    if(p==='reposicion') wmsRepoCargar();
+    if(p==='movimientos') wmsCargarMovs();
+    if(p==='ajustes') wmsAjustesCargar();
   }
 
   async function wmsCargarResumen(){
@@ -3570,9 +3667,21 @@
       if(d.tipo==='producto'){
         beep(false);
         _wmsProd = d;
+      } else if(d.tipo==='modulo'){
+        beep(false);
+        const filas = (d.ubicaciones||[]).filter(u=>(u.contenido||[]).length)
+          .map(u=>`<div class="row r4"><span class="sku mono">${esc(u.codigo)} ${u.rol==='reserva'?'🚫':''}</span>
+            <span class="ti">${u.contenido.map(c=>esc(c.sku)+' ×'+c.cantidad).join(' · ')}</span><span class="u"></span></div>`).join('');
+        res.innerHTML = `<div class="scan-card scan-warn"><div class="big">🏗 Módulo ${esc(d.nombre)} · ${esc(WMS_TIPO_NOMBRE[d.tipo_modulo]||d.tipo_modulo||'')}</div>
+          <div class="det">${(d.ubicaciones||[]).length} ubicaciones · ${d.niveles} nivel(es)</div>
+          <div class="list" style="margin-top:8px">${filas || '<div class="status">Vacío.</div>'}</div></div>`;
       } else if(d.tipo==='ubicacion'){
         beep(false);
-        if(_wmsModoAct==='mover'){
+        if(_wmsModoAct==='sacar' && d.rol==='reserva'){
+          beep(true);
+          res.innerHTML = `<div class="scan-card scan-cancel"><div class="big">🚫 ${esc(d.codigo)} es RESERVA</div>
+            <div class="det">De los niveles altos NO se pica: bajá el pallet con el modo <b>🔀 Mover</b> a una ubicación de picking (nivel 1 / estantería / piso) y sacá desde ahí.</div></div>`;
+        } else if(_wmsModoAct==='mover'){
           if(!_wmsDesde) _wmsDesde = d;
           else if(d.codigo === _wmsDesde.codigo){ res.innerHTML='<div class="status err">Esa ya es la ubicación de ORIGEN. Escaneá el rack de DESTINO.</div>'; }
           else _wmsUbi = d;
@@ -3601,11 +3710,12 @@
     if(_wmsProd){
       const ubis = (_wmsProd.ubicaciones||[]);
       const filas = ubis.length
-        ? ubis.map(u=>`<div class="row r4"><span class="sku mono">${esc(u.ubicacion)}</span><span class="ti"></span><span class="u">×${u.cantidad}</span></div>`).join('')
+        ? ubis.map(u=>`<div class="row r4"><span class="sku mono">${esc(u.ubicacion)}${u.rol==='reserva'?' <span title="RESERVA: no se pica de acá">🚫</span>':''}</span><span class="ti">${u.rol==='reserva'?'<i style="color:var(--muted2)">reserva</i>':''}</span><span class="u">×${u.cantidad}</span></div>`).join('')
         : '<div class="status">Todavía sin ubicación asignada.</div>';
+      const split = (_wmsProd.picking!==undefined) ? ` · 🟢 picking <b>${_wmsProd.picking||0}</b> · 🚫 reserva <b>${_wmsProd.reserva||0}</b>` : '';
       pp.innerHTML = `<div class="scan-card scan-ok" style="margin:0"><div class="big">📦 ${esc(_wmsProd.sku)}
           <button class="mini" onclick="_wmsProd=null; wmsPintar();" style="float:right">✕</button></div>
-        <div class="det">EAN <span class="mono">${esc(_wmsProd.ean||'—')}</span>${_wmsProd.en_catalogo?'':' · <b>no está en el catálogo</b>'} · total ubicado: <b>${_wmsProd.total||0}</b></div>
+        <div class="det">EAN <span class="mono">${esc(_wmsProd.ean||'—')}</span>${_wmsProd.en_catalogo?'':' · <b>no está en el catálogo</b>'} · total: <b>${_wmsProd.total||0}</b>${split}</div>
         <div class="list" style="margin-top:8px">${filas}</div></div>`;
     } else pp.innerHTML = '';
     // — Ficha de ubicación(es) —
@@ -3614,7 +3724,12 @@
       const filas = (u.contenido||[]).length
         ? u.contenido.map(c=>`<div class="row r4"><span class="sku">${esc(c.sku)}</span><span class="ti"></span><span class="u">×${c.cantidad}</span></div>`).join('')
         : '<div class="status">Vacía.</div>';
+      const rolChip = u.rol==='reserva'
+        ? ' <span class="pill" style="background:#FDECEA;color:#B3261E">🚫 RESERVA'+(u.nivel?' · niv '+esc(String(u.nivel)):'')+'</span>'
+        : ' <span class="pill" style="background:#E9F9F0;color:#2F9E44">🟢 PICKING</span>';
+      const modChip = u.modulo ? ` <span class="pill">${esc(u.modulo)} · ${esc(WMS_TIPO_NOMBRE[u.tipo_modulo]||'')}</span>` : '';
       return `<div class="scan-card scan-warn" style="margin:0 0 10px"><div class="big">${titulo} ${esc(u.codigo)}${extra||''}</div>
+        <div class="det">${rolChip}${modChip}</div>
         <div class="list" style="margin-top:8px">${filas}</div></div>`;
     };
     if(_wmsModoAct==='mover'){
@@ -3666,6 +3781,7 @@
       _wmsProd = null; _wmsDesde = null;
       if(_wmsUbi) wmsRefrescarUbi(_wmsUbi.codigo);
       wmsPintar(); wmsCargarResumen();
+      if(_wmsPest && _wmsPest.includes('reposicion')) wmsRepoCargar(true); // refrescar el numerito
       const i=document.getElementById('wms-scan'); if(i){ i.value=''; i.focus(); }
     }catch(e){
       beep(true);
@@ -3699,80 +3815,228 @@
   }
 
   async function wmsCargarUbis(){
-    const cont = document.getElementById('wms-ubis-lista'); if(!cont) return;
     try{
       const r = await authFetch(`${API}/api/despacho/wms/ubicaciones`); const d = await r.json();
-      if(!r.ok) throw new Error(d.error||'');
-      _wmsUbisData = d.ubicaciones || [];
-      if(!_wmsUbisData.length){ cont.innerHTML='<div class="status">Todavía no hay ubicaciones. Creá el primer rack arriba.</div>'; return; }
-      const racks = new Map();
-      for(const u of _wmsUbisData){
-        let e = racks.get(u.rack);
-        if(!e){ e = { rack: u.rack, ubis: [], unidades: 0 }; racks.set(u.rack, e); }
-        e.ubis.push(u); e.unidades += (u.unidades||0);
+      if(r.ok) _wmsUbisData = d.ubicaciones || [];
+    }catch(e){}
+  }
+
+  // ── PLANO estilo Excel ──
+  async function wmsPlanoCargar(){
+    const st = document.getElementById('wms-plano-status');
+    if(st){ st.className='status'; st.textContent='Cargando plano…'; }
+    try{
+      const [rm, rs] = await Promise.all([
+        authFetch(`${API}/api/despacho/wms/modulos`),
+        authFetch(`${API}/api/despacho/wms/stock-mapa`)
+      ]);
+      const dm = await rm.json(), ds = await rs.json();
+      if(!rm.ok) throw new Error(dm.error||'');
+      _wmsMods = dm.modulos || [];
+      _wmsStockMapa = new Map();
+      for(const s of ((ds && ds.stock) || [])){
+        if(!_wmsStockMapa.has(s.ubicacion)) _wmsStockMapa.set(s.ubicacion, []);
+        _wmsStockMapa.get(s.ubicacion).push(s);
       }
-      cont.innerHTML = [...racks.values()].map(rk=>{
-        const filas = rk.ubis.map(u=>`<div class="row r4"><span class="sku mono">${esc(u.codigo)}</span>
-          <span class="ti">${u.skus?`${u.skus} SKU(s)`:'<i style="color:var(--muted2)">vacía</i>'}</span>
-          <span class="u">${u.unidades?('×'+u.unidades):''}</span></div>`).join('');
-        return `<details class="seg-sec"><summary>
-          <span class="seg-tit">Rack <b>${esc(rk.rack)}</b> · ${rk.ubis.length} ubicaciones · ${rk.unidades} unidades</span>
-          <span style="margin-left:auto; display:flex; gap:6px">
-            <button class="mini" onclick="event.preventDefault(); wmsImprimirRack('${esc(rk.rack)}')">🖨 Etiquetas</button>
-            <button class="mini del" onclick="event.preventDefault(); wmsBorrarRack('${esc(rk.rack)}')">Borrar</button>
-          </span></summary>
-          <div class="list">${filas}</div></details>`;
-      }).join('');
-    }catch(e){ cont.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>'; }
+      await wmsCargarUbis();
+      // Selector de módulos
+      const sel = document.getElementById('wms-mod-sel');
+      const actual = _wmsSel ? String(_wmsSel.id) : '';
+      sel.innerHTML = '<option value="">＋ Módulo nuevo…</option>' +
+        _wmsMods.map(m=>`<option value="${m.id}">${esc(m.nombre)} · ${esc(WMS_TIPO_NOMBRE[m.tipo]||m.tipo)}</option>`).join('');
+      sel.value = actual && _wmsMods.some(m=>String(m.id)===actual) ? actual : '';
+      wmsModElegir(sel.value);
+      if(st) st.textContent = _wmsMods.length ? '' : 'Todavía no hay módulos: elegí tipo y nombre arriba, tocá 🖌 Pintar celdas y dibujá tu primer rack.';
+    }catch(e){ if(st){ st.className='status err'; st.textContent='Error: '+esc(e.message); } }
   }
 
-  async function wmsCrearRack(){
-    const st = document.getElementById('wms-ubis-status');
-    const rack = (document.getElementById('wms-rack').value||'').trim().toUpperCase();
-    const columnas = parseInt(document.getElementById('wms-cols').value)||0;
-    const estantes = parseInt(document.getElementById('wms-est').value)||0;
-    if(!rack){ st.className='status err'; st.textContent='Poné el nombre del rack (ej. A).'; return; }
-    st.className='status'; st.textContent='Creando…';
-    try{
-      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({rack, columnas, estantes}) });
-      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
-      st.className='status ok'; st.textContent=`✓ Rack ${rack}: ${d.creadas} ubicaciones aseguradas (${rack}-01-1 … ${rack}-${String(columnas).padStart(2,'0')}-${estantes}). Ahora imprimí las etiquetas.`;
-      document.getElementById('wms-rack').value='';
-      wmsCargarUbis(); wmsCargarResumen();
-    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  function wmsModElegir(id){
+    _wmsSel = id ? (_wmsMods.find(m=>String(m.id)===String(id)) || null) : null;
+    document.getElementById('wms-mod-nombre').value = _wmsSel ? _wmsSel.nombre : '';
+    document.getElementById('wms-mod-tipo').value = _wmsSel ? _wmsSel.tipo : 'selectivo';
+    document.getElementById('wms-mod-niveles').value = _wmsSel ? _wmsSel.niveles : 4;
+    document.getElementById('wms-mod-kg').value = (_wmsSel && _wmsSel.capacidad_kg != null) ? _wmsSel.capacidad_kg : '';
+    _wmsCeldasTmp = _wmsSel ? (_wmsSel.celdas||[]).map(x=>({f:x.f, c:x.c, n:x.n})) : [];
+    _wmsPintarModo = null;
+    wmsModTipoCambio();
+    wmsGridRender();
+    wmsModDetalle();
   }
-  async function wmsCrearLibre(){
-    const st = document.getElementById('wms-ubis-status');
-    const codigo = (document.getElementById('wms-ubi-libre').value||'').trim().toUpperCase();
-    if(!codigo){ st.className='status err'; st.textContent='Escribí el código de la ubicación.'; return; }
-    try{
-      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo}) });
-      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
-      st.className='status ok'; st.textContent=`✓ Ubicación ${codigo} creada.`;
-      document.getElementById('wms-ubi-libre').value='';
-      wmsCargarUbis(); wmsCargarResumen();
-    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  function wmsModTipoCambio(){
+    const t = document.getElementById('wms-mod-tipo').value;
+    const nv = document.getElementById('wms-mod-niveles');
+    if(t==='piso'){ nv.value = 1; nv.disabled = true; } else nv.disabled = false;
+    document.querySelectorAll('#wms-btn-pintar, #wms-btn-borrarcel').forEach(b=>{
+      b.classList.toggle('activo', b.id === 'wms-btn-'+(_wmsPintarModo==='pintar'?'pintar':_wmsPintarModo==='borrar'?'borrarcel':''));
+    });
   }
-  async function wmsBorrarRack(rack){
-    if(!confirm(`¿Borrar TODAS las ubicaciones del rack ${rack}? Solo se puede si están vacías (sin stock).`)) return;
-    const st = document.getElementById('wms-ubis-status');
+  function wmsModoPintar(m){
+    _wmsPintarModo = (_wmsPintarModo===m) ? null : m;
+    document.getElementById('wms-btn-pintar').classList.toggle('activo', _wmsPintarModo==='pintar');
+    document.getElementById('wms-btn-borrarcel').classList.toggle('activo', _wmsPintarModo==='borrar');
+    const st = document.getElementById('wms-plano-status');
+    if(st){ st.className='status';
+      st.textContent = _wmsPintarModo==='pintar' ? '🖌 Click en los cuadrados vacíos para agregar columnas al módulo. Guardá cuando termines.'
+        : _wmsPintarModo==='borrar' ? '🧽 Click en los cuadrados del módulo para sacarlos. Guardá cuando termines.' : ''; }
+  }
+
+  function wmsGridRender(){
+    const g = document.getElementById('wms-grid'); if(!g) return;
+    // celda → dueño (módulo guardado) u ocupación temporal (edición)
+    const duenos = new Map(); // "f,c" → {mod, n}
+    for(const m of _wmsMods){
+      if(_wmsSel && m.id===_wmsSel.id) continue; // el seleccionado se pinta desde tmp
+      for(const cel of (m.celdas||[])) duenos.set(cel.f+','+cel.c, { mod:m, n:cel.n });
+    }
+    const tmp = new Map();
+    for(const cel of _wmsCeldasTmp) tmp.set(cel.f+','+cel.c, cel.n);
+    const nombreSel = (document.getElementById('wms-mod-nombre').value||'').toUpperCase() || (_wmsSel?_wmsSel.nombre:'?');
+    const tipoSel = document.getElementById('wms-mod-tipo').value;
+    const nivelesDe = m => m ? m.niveles : (parseInt(document.getElementById('wms-mod-niveles').value)||1);
+    let html = `<div style="display:grid; grid-template-columns:repeat(${WMS_GRID_C}, 26px); gap:2px; width:max-content">`;
+    for(let f=0; f<WMS_GRID_F; f++){
+      for(let c=0; c<WMS_GRID_C; c++){
+        const k=f+','+c;
+        let bg='#EFECE5', txt='', color='#999', bold='', tit='';
+        const du = duenos.get(k), tn = tmp.get(k);
+        if(tn !== undefined){
+          bg = WMS_TIPO_COLOR[tipoSel]||'#888'; color='#fff'; bold='font-weight:800;';
+          txt = `${esc(nombreSel)}<br>${tn}`;
+          tit = wmsTooltipCelda(nombreSel, tn, nivelesDe(_wmsSel));
+        } else if(du){
+          bg = WMS_TIPO_COLOR[du.mod.tipo]||'#888'; color='#fff';
+          txt = `${esc(du.mod.nombre)}<br>${du.n}`;
+          tit = wmsTooltipCelda(du.mod.nombre, du.n, du.mod.niveles);
+        }
+        html += `<div onclick="wmsCeldaClick(${f},${c})" title="${esc(tit)}"
+          style="width:26px; height:26px; border-radius:4px; background:${bg}; color:${color}; ${bold}
+                 font-size:8px; line-height:1.1; display:flex; align-items:center; justify-content:center;
+                 text-align:center; cursor:pointer; user-select:none">${txt}</div>`;
+      }
+    }
+    html += '</div>';
+    g.innerHTML = html;
+  }
+
+  // Tooltip de una celda (columna): qué mercadería hay en cada nivel
+  function wmsTooltipCelda(nombre, n, niveles){
+    const lineas = [];
+    for(let nv=1; nv<=(niveles||1); nv++){
+      const cod = `${nombre}-${String(n).padStart(2,'0')}-${nv}`;
+      const st = _wmsStockMapa.get(cod)||[];
+      const rolU = (_wmsUbisData.find(u=>u.codigo===cod)||{}).rol;
+      const cont = st.length ? st.map(s=>`${s.sku} ×${s.cantidad}`).join(', ') : 'vacío';
+      lineas.push(`${cod}${rolU==='reserva'?' 🚫':''}: ${cont}`);
+    }
+    return lineas.join('\n');
+  }
+
+  function wmsCeldaClick(f,c){
+    const k=f+','+c;
+    // ¿La celda es de otro módulo? → seleccionarlo (modo consulta) o avisar (modo pintar)
+    for(const m of _wmsMods){
+      if(_wmsSel && m.id===_wmsSel.id) continue;
+      if((m.celdas||[]).some(x=>x.f===f && x.c===c)){
+        if(_wmsPintarModo){ const st=document.getElementById('wms-plano-status'); if(st){ st.className='status err'; st.textContent=`Esa celda es del módulo ${m.nombre}.`; } return; }
+        document.getElementById('wms-mod-sel').value = String(m.id);
+        wmsModElegir(String(m.id));
+        return;
+      }
+    }
+    const idx = _wmsCeldasTmp.findIndex(x=>x.f===f && x.c===c);
+    if(_wmsPintarModo==='pintar'){
+      if(idx>-1) return;
+      const nMax = _wmsCeldasTmp.reduce((a,x)=>Math.max(a,x.n),0);
+      _wmsCeldasTmp.push({f, c, n:nMax+1});
+      wmsGridRender();
+    } else if(_wmsPintarModo==='borrar'){
+      if(idx>-1){ _wmsCeldasTmp.splice(idx,1); wmsGridRender(); }
+    } else if(idx>-1){
+      wmsModDetalle(); // click en el módulo seleccionado → refrescar detalle
+    }
+  }
+
+  async function wmsModGuardar(){
+    const st = document.getElementById('wms-plano-status');
+    const body = {
+      id: _wmsSel ? _wmsSel.id : null,
+      nombre: (document.getElementById('wms-mod-nombre').value||'').trim().toUpperCase(),
+      tipo: document.getElementById('wms-mod-tipo').value,
+      niveles: parseInt(document.getElementById('wms-mod-niveles').value)||1,
+      capacidad_kg: document.getElementById('wms-mod-kg').value || null,
+      celdas: _wmsCeldasTmp
+    };
+    if(!body.nombre){ st.className='status err'; st.textContent='Ponele nombre al módulo (ej. A).'; return; }
+    if(!body.celdas.length){ st.className='status err'; st.textContent='Pintá al menos una celda.'; return; }
+    st.className='status'; st.textContent='Guardando módulo…';
     try{
-      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones/borrar`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({rack}) });
+      const r = await authFetch(`${API}/api/despacho/wms/modulos`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
-      st.className='status ok'; st.textContent=`✓ Rack ${rack}: ${d.borradas} ubicaciones borradas.`;
-      wmsCargarUbis(); wmsCargarResumen();
+      st.className='status ok';
+      st.textContent = `✓ ${d.nombre}: ${d.ubicaciones} ubicaciones (${d.creadas} nuevas${d.borradas?`, ${d.borradas} eliminadas`:''}). Imprimí las etiquetas nuevas y pegalas.`;
+      _wmsPintarModo = null; _wmsSel = { id: d.id };
+      wmsPlanoCargar(); wmsCargarResumen();
     }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
   }
 
-  function wmsImprimirRack(rack){
-    const st = document.getElementById('wms-ubis-status');
+  async function wmsModBorrar(){
+    if(!_wmsSel){ return; }
+    if(!confirm(`¿Borrar el módulo ${_wmsSel.nombre} completo (todas sus ubicaciones)? Solo se puede si está vacío.`)) return;
+    const st = document.getElementById('wms-plano-status');
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/modulos/borrar`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:_wmsSel.id}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent='✓ Módulo borrado.';
+      _wmsSel = null; wmsPlanoCargar(); wmsCargarResumen();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  // Detalle del módulo seleccionado: columnas × niveles con stock y rol
+  function wmsModDetalle(){
+    const cont = document.getElementById('wms-mod-detalle'); if(!cont) return;
+    if(!_wmsSel || !_wmsSel.nombre){ cont.innerHTML=''; return; }
+    const m = _wmsMods.find(x=>x.id===_wmsSel.id) || _wmsSel;
+    const puedeRol = !_pestPermitidas || _pestPermitidas.includes('config');
+    let html = `<div class="group-h">🏗 ${esc(m.nombre)} · ${esc(WMS_TIPO_NOMBRE[m.tipo]||'')} · ${ (m.celdas||[]).length } columnas × ${m.niveles} niveles${m.capacidad_kg?` · tope ${m.capacidad_kg} kg`:''}</div><div class="list">`;
+    const celdasOrd = (m.celdas||[]).slice().sort((a,b)=>a.n-b.n);
+    for(const cel of celdasOrd){
+      for(let nv=m.niveles; nv>=1; nv--){
+        const cod = `${m.nombre}-${String(cel.n).padStart(2,'0')}-${nv}`;
+        const u = _wmsUbisData.find(x=>x.codigo===cod)||{};
+        const stx = _wmsStockMapa.get(cod)||[];
+        const esRes = u.rol==='reserva';
+        const rolBtn = puedeRol
+          ? `<button class="mini" onclick="wmsRolToggle('${esc(cod)}','${esRes?'picking':'reserva'}')" title="Cambiar rol">${esRes?'🚫 reserva':'🟢 picking'}</button>`
+          : (esRes?'<span class="pill" style="background:#FDECEA;color:#B3261E">🚫</span>':'<span class="pill" style="background:#E9F9F0;color:#2F9E44">🟢</span>');
+        html += `<div class="row r4"><span class="sku mono">${esc(cod)}</span>
+          <span class="ti">${stx.length ? stx.map(s=>esc(s.sku)+' ×'+s.cantidad).join(' · ') : '<i style="color:var(--muted2)">vacía</i>'}</span>
+          <span class="u">${rolBtn}</span></div>`;
+      }
+    }
+    html += '</div>';
+    cont.innerHTML = html;
+  }
+
+  async function wmsRolToggle(codigo, rolNuevo){
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ubicaciones/rol`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo, rol:rolNuevo}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      await wmsCargarUbis(); wmsModDetalle(); wmsGridRender();
+    }catch(e){ alert('Error: '+e.message); }
+  }
+
+  // ── Etiquetas ──
+  function wmsEtiquetasModulo(){
+    const st = document.getElementById('wms-plano-status');
+    const nombre = _wmsSel && _wmsSel.nombre;
+    if(!nombre){ st.className='status err'; st.textContent='Elegí un módulo guardado primero.'; return; }
     if(typeof JsBarcode === 'undefined'){ st.className='status err'; st.textContent='No cargó el generador de códigos. Recargá la página.'; return; }
-    const ubis = _wmsUbisData.filter(u=>u.rack===rack);
-    if(!ubis.length) return;
+    const ubis = _wmsUbisData.filter(u=>u.rack===nombre);
+    if(!ubis.length){ st.className='status err'; st.textContent='Guardá el módulo primero (no tiene ubicaciones).'; return; }
     const w = window.open('', '_blank', 'width=560,height=760');
     let paginas = '';
-    ubis.forEach((u,i)=>{ paginas += `<div class="lab"><div class="cod">${esc(u.codigo)}</div><svg id="ub${i}"></svg></div>`; });
-    w.document.write(`<html><head><title>Etiquetas rack ${esc(rack)}</title><style>
+    ubis.forEach((u,i)=>{ paginas += `<div class="lab"><div class="cod">${esc(u.codigo)}${u.rol==='reserva'?' <span style="font-size:4mm">🚫RES</span>':''}</div><svg id="ub${i}"></svg></div>`; });
+    w.document.write(`<html><head><title>Etiquetas ${esc(nombre)}</title><style>
       @page{ size:50mm 25mm; margin:0 }
       *{ box-sizing:border-box } body{ margin:0; font-family:'Segoe UI',Arial,sans-serif; color:#000 }
       .lab{ width:50mm; height:25mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1mm; overflow:hidden }
@@ -3785,8 +4049,143 @@
     setTimeout(()=>{
       try{ ubis.forEach((u,i)=>{ JsBarcode(w.document.getElementById('ub'+i), 'UB:'+u.codigo, {format:'CODE128', width:1.6, height:44, displayValue:false, margin:0}); }); }
       catch(e){ st.className='status err'; st.textContent='No pude generar los códigos: '+esc(e.message); return; }
-      st.className='status ok'; st.textContent=`✓ ${ubis.length} etiqueta(s) del rack ${rack} listas (5×2,5 cm).`;
+      st.className='status ok'; st.textContent=`✓ ${ubis.length} etiqueta(s) de ${nombre} listas (5×2,5 cm).`;
     }, 350);
+  }
+
+  function wmsEtiquetaRack(){
+    const st = document.getElementById('wms-plano-status');
+    const nombre = (_wmsSel && _wmsSel.nombre) || (document.getElementById('wms-mod-nombre').value||'').toUpperCase();
+    if(!nombre){ st.className='status err'; st.textContent='Elegí o nombrá el módulo primero.'; return; }
+    if(typeof JsBarcode === 'undefined'){ st.className='status err'; st.textContent='No cargó el generador de códigos. Recargá la página.'; return; }
+    const m = _wmsMods.find(x=>x.nombre===nombre);
+    const tipoTxt = m ? (WMS_TIPO_NOMBRE[m.tipo]||'') : '';
+    const w = window.open('', '_blank', 'width=560,height=760');
+    w.document.write(`<html><head><title>Rack ${esc(nombre)}</title><style>
+      @page{ size:100mm 150mm; margin:0 }
+      body{ margin:0; font-family:'Segoe UI',Arial,sans-serif; color:#000; width:100mm; height:150mm;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center }
+      .nom{ font-size:42mm; font-weight:900; line-height:1 }
+      .tip{ font-size:8mm; margin:2mm 0 6mm }
+      svg{ width:80mm; height:30mm }
+      .print-btn{ position:fixed; top:6px; right:6px; padding:10px 18px; font-size:15px; cursor:pointer }
+      @media print{ .print-btn{ display:none } }
+    </style></head><body>
+      <div class="nom">${esc(nombre)}</div>
+      <div class="tip">${esc(tipoTxt)} · PONTEC WMS</div>
+      <svg id="rb"></svg>
+      <button class="print-btn" onclick="window.print()">🖨 Imprimir</button></body></html>`);
+    w.document.close();
+    setTimeout(()=>{
+      try{ JsBarcode(w.document.getElementById('rb'), 'UB:'+nombre, {format:'CODE128', width:3, height:100, fontSize:20, margin:0}); }
+      catch(e){ st.className='status err'; st.textContent='No pude generar el código: '+esc(e.message); return; }
+      st.className='status ok'; st.textContent=`✓ Etiqueta grande del rack ${nombre} lista (10×15). Escaneándola ves todo el módulo.`;
+    }, 300);
+  }
+
+  // ── Reposición ──
+  async function wmsRepoCargar(soloBadge){
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/reposicion`); const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'');
+      const badge = document.getElementById('wms-repo-badge');
+      if(badge){ const n=(d.alertas||[]).length; badge.textContent=n; badge.style.display = n?'':'none'; }
+      if(soloBadge) return;
+      const st = document.getElementById('wms-repo-status');
+      const cont = document.getElementById('wms-repo-lista');
+      if(st){ st.className='status'; st.textContent = `Mínimo de picking: ${d.min} unidades (se cambia en ⚙ Ajustes del WMS).`; }
+      if(!cont) return;
+      if(!(d.alertas||[]).length){ cont.innerHTML='<div class="status ok">✓ Nada para reponer: todos los picking están arriba del mínimo.</div>'; return; }
+      cont.innerHTML = `<table class="tr-tabla"><thead><tr><th>SKU</th><th>Picking</th><th>Reserva</th><th>Bajar desde</th><th>Reponer en</th></tr></thead><tbody>`+
+        d.alertas.map(a=>`<tr><td><b>${esc(a.sku)}</b></td>
+          <td style="color:${a.picking===0?'#B3261E':'#B88207'}; font-weight:800">${a.picking}</td>
+          <td>${a.reserva}</td>
+          <td class="mono">🚫 ${esc(a.bajar_desde)}</td>
+          <td class="mono">${a.reponer_en?('🟢 '+esc(a.reponer_en)):'<i>elegí una de picking</i>'}</td></tr>`).join('')+'</tbody></table>';
+    }catch(e){
+      const cont = document.getElementById('wms-repo-lista');
+      if(cont && !soloBadge) cont.innerHTML = '<div class="status err">Error: '+esc(e.message)+'</div>';
+    }
+  }
+
+  // ── Ajustes del WMS (mínimo, pesos, permisos internos) ──
+  async function wmsAjustesCargar(){
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ajustes`); const d = await r.json();
+      if(r.ok) document.getElementById('wms-aj-min').value = d.min_picking;
+    }catch(e){}
+    const permCard = document.getElementById('wms-perm-card');
+    if(permCard) permCard.style.display = (!_pestPermitidas || _pestPermitidas.includes('config')) ? '' : 'none';
+    wmsPermCargar();
+    wmsPesosCargar();
+  }
+  async function wmsAjustesGuardar(){
+    const st = document.getElementById('wms-aj-status');
+    const min = parseInt(document.getElementById('wms-aj-min').value)||0;
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/ajustes`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({min_picking:min}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent=`✓ Mínimo de picking: ${d.min_picking} unidades.`;
+      wmsRepoCargar(true);
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  async function wmsPesosCargar(){
+    const cont = document.getElementById('wms-pesos-lista'); if(!cont) return;
+    const b = (document.getElementById('wms-peso-buscar').value||'').trim();
+    if(!b){ cont.innerHTML='<div class="status">Buscá un SKU para cargarle el peso.</div>'; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/pesos?buscar=${encodeURIComponent(b)}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      if(!(d.productos||[]).length){ cont.innerHTML='<div class="status">Sin resultados.</div>'; return; }
+      cont.innerHTML = `<table class="tr-tabla" style="max-width:560px"><thead><tr><th>SKU</th><th>Peso (kg)</th><th></th></tr></thead><tbody>`+
+        d.productos.map(p=>`<tr><td><b>${esc(p.sku)}</b></td>
+          <td><input type="number" id="peso-${cssId(p.sku)}" value="${p.peso_kg!=null?p.peso_kg:''}" min="0" step="0.1" style="width:90px"></td>
+          <td><button class="mini" onclick="wmsPesoGuardar('${esc(p.sku)}')">Guardar</button></td></tr>`).join('')+'</tbody></table>';
+    }catch(e){ cont.innerHTML='<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+  async function wmsPesoGuardar(sku){
+    const v = document.getElementById('peso-'+cssId(sku)).value;
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/peso`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sku, peso_kg: v===''?null:Number(v)}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      const st = document.getElementById('wms-aj-status');
+      st.className='status ok'; st.textContent=`✓ ${sku}: ${d.peso_kg!=null?d.peso_kg+' kg':'sin peso'}.`;
+    }catch(e){ alert('Error: '+e.message); }
+  }
+
+  async function wmsPermCargar(){
+    const cont = document.getElementById('wms-perm-lista'); if(!cont) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/permisos`); const d = await r.json();
+      if(!r.ok){ cont.innerHTML=''; return; }
+      if(!(d.permisos||[]).length){ cont.innerHTML='<div class="status">Sin filas: todos ven Operar y Reposición (y quien tiene ⚙ config ve todo).</div>'; return; }
+      cont.innerHTML = `<table class="tr-tabla" style="max-width:640px"><thead><tr><th>Email</th><th>Ve</th><th></th></tr></thead><tbody>`+
+        d.permisos.map(p=>`<tr><td>${esc(p.email)}</td>
+          <td>${(p.pestanas||[]).map(x=>`<span class="pill">${esc(x)}</span>`).join(' ')}</td>
+          <td><button class="mini del" onclick="wmsPermBorrar('${esc(p.email)}')">Quitar</button></td></tr>`).join('')+'</tbody></table>';
+    }catch(e){ cont.innerHTML=''; }
+  }
+  async function wmsPermGuardar(){
+    const email = (document.getElementById('wms-perm-email').value||'').trim().toLowerCase();
+    const pest = [...document.querySelectorAll('.wms-perm-chk:checked')].map(c=>c.value);
+    const st = document.getElementById('wms-aj-status');
+    if(!email){ st.className='status err'; st.textContent='Poné el email.'; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/permisos`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, pestanas:pest}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      st.className='status ok'; st.textContent=`✓ ${email}: ${pest.join(', ')}. (Le impacta al recargar la app.)`;
+      document.getElementById('wms-perm-email').value='';
+      wmsPermCargar();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+  async function wmsPermBorrar(email){
+    if(!confirm(`¿Quitar la fila de ${email}? Vuelve al default (Operar + Reposición).`)) return;
+    try{
+      const r = await authFetch(`${API}/api/despacho/wms/permisos`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, pestanas:null}) });
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      wmsPermCargar();
+    }catch(e){ alert('Error: '+e.message); }
   }
 
   async function wmsCargarMovs(){
