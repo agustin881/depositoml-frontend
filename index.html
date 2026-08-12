@@ -635,7 +635,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v80</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v81</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1047,6 +1047,8 @@
         <div id="wms-grid-wrap" style="overflow:auto; border:1px solid var(--line,#E5E1D8); border-radius:10px; background:#FBFAF7; padding:8px">
           <div id="wms-grid"></div>
         </div>
+        <p class="hint" style="margin:8px 0 0">👆 <b>Tocá cualquier cuadrado</b> para ver esa columna de frente, estante por estante.</p>
+        <div id="wms-col-detalle" style="margin-top:12px"></div>
         <div id="wms-mod-detalle" style="margin-top:14px"></div>
       </div>
 
@@ -3858,6 +3860,8 @@
     document.getElementById('wms-mod-kg').value = (_wmsSel && _wmsSel.capacidad_kg != null) ? _wmsSel.capacidad_kg : '';
     _wmsCeldasTmp = _wmsSel ? (_wmsSel.celdas||[]).map(x=>({f:x.f, c:x.c, n:x.n})) : [];
     _wmsPintarModo = null;
+    _wmsColVista = null;
+    const cd = document.getElementById('wms-col-detalle'); if(cd) cd.innerHTML='';
     wmsModTipoCambio();
     wmsGridRender();
     wmsModDetalle();
@@ -3933,13 +3937,15 @@
 
   function wmsCeldaClick(f,c){
     const k=f+','+c;
-    // ¿La celda es de otro módulo? → seleccionarlo (modo consulta) o avisar (modo pintar)
+    // ¿La celda es de otro módulo? → seleccionarlo y mostrar ESA columna de frente
     for(const m of _wmsMods){
       if(_wmsSel && m.id===_wmsSel.id) continue;
-      if((m.celdas||[]).some(x=>x.f===f && x.c===c)){
+      const cel = (m.celdas||[]).find(x=>x.f===f && x.c===c);
+      if(cel){
         if(_wmsPintarModo){ const st=document.getElementById('wms-plano-status'); if(st){ st.className='status err'; st.textContent=`Esa celda es del módulo ${m.nombre}.`; } return; }
         document.getElementById('wms-mod-sel').value = String(m.id);
         wmsModElegir(String(m.id));
+        wmsColumnaVista(m.nombre, cel.n, m.niveles, m.tipo);
         return;
       }
     }
@@ -3952,8 +3958,46 @@
     } else if(_wmsPintarModo==='borrar'){
       if(idx>-1){ _wmsCeldasTmp.splice(idx,1); wmsGridRender(); }
     } else if(idx>-1){
-      wmsModDetalle(); // click en el módulo seleccionado → refrescar detalle
+      // Click en una columna del módulo seleccionado → vista de frente de ESA columna
+      const m = _wmsMods.find(x=>_wmsSel && x.id===_wmsSel.id);
+      const nombre = m ? m.nombre : ((document.getElementById('wms-mod-nombre').value||'').toUpperCase() || '?');
+      const niveles = m ? m.niveles : (parseInt(document.getElementById('wms-mod-niveles').value)||1);
+      const tipo = m ? m.tipo : document.getElementById('wms-mod-tipo').value;
+      wmsColumnaVista(nombre, _wmsCeldasTmp[idx].n, niveles, tipo);
+      wmsModDetalle();
     }
+  }
+
+  // Vista DE FRENTE de una columna: los estantes apilados como los ves parado
+  // frente al rack (nivel más alto arriba, piso abajo), con lo que hay en cada uno.
+  let _wmsColVista = null; // última columna abierta (para refrescarla tras cambios)
+  function wmsColumnaVista(nombre, n, niveles, tipo){
+    const cont = document.getElementById('wms-col-detalle'); if(!cont) return;
+    _wmsColVista = { nombre, n, niveles, tipo };
+    const pad2 = x => String(x).padStart(2,'0');
+    const puedeRol = !_pestPermitidas || _pestPermitidas.includes('config');
+    let html = `<div class="group-h">🧱 Columna <b class="mono">${esc(nombre)}-${pad2(n)}</b> · ${esc(WMS_TIPO_NOMBRE[tipo]||'')} · vista de frente
+      <button class="mini" style="float:right" onclick="document.getElementById('wms-col-detalle').innerHTML=''">✕ cerrar</button></div>`;
+    for(let nv=niveles; nv>=1; nv--){
+      const cod = `${nombre}-${pad2(n)}-${nv}`;
+      const u = _wmsUbisData.find(x=>x.codigo===cod)||{};
+      const st = _wmsStockMapa.get(cod)||[];
+      const esRes = u.rol==='reserva';
+      const unidades = st.reduce((a,s)=>a+s.cantidad,0);
+      const rolBtn = puedeRol
+        ? `<button class="mini" onclick="wmsRolToggle('${esc(cod)}','${esRes?'picking':'reserva'}')" title="Cambiar rol">${esRes?'🚫 reserva':'🟢 picking'}</button>`
+        : `<span style="font-size:11px">${esRes?'🚫 reserva':'🟢 picking'}</span>`;
+      html += `<div style="border:2px solid ${esRes?'#F0B9B3':'#9BE3BC'}; border-radius:10px; padding:10px 14px; margin:6px 0;
+          background:${esRes?'#FDF3F2':'#F4FBF7'}; display:flex; gap:14px; align-items:center; flex-wrap:wrap">
+        <div style="min-width:92px"><b>Estante ${nv}</b><br>${rolBtn}</div>
+        <div style="flex:1; min-width:180px">${st.length
+          ? st.map(s=>`<span class="pill mono" style="font-size:13px">${esc(s.sku)} <b>×${s.cantidad}</b></span>`).join(' ')
+          : '<i style="color:var(--muted2)">vacío</i>'}</div>
+        <div style="text-align:right"><span class="mono" style="font-size:11px; color:var(--muted2)">${esc(cod)}</span>${unidades?`<br><b>${unidades}</b> u.`:''}</div>
+      </div>`;
+    }
+    cont.innerHTML = html;
+    cont.scrollIntoView({behavior:'smooth', block:'nearest'});
   }
 
   async function wmsModGuardar(){
@@ -4022,6 +4066,7 @@
       const r = await authFetch(`${API}/api/despacho/wms/ubicaciones/rol`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo, rol:rolNuevo}) });
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
       await wmsCargarUbis(); wmsModDetalle(); wmsGridRender();
+      if(_wmsColVista) wmsColumnaVista(_wmsColVista.nombre, _wmsColVista.n, _wmsColVista.niveles, _wmsColVista.tipo);
     }catch(e){ alert('Error: '+e.message); }
   }
 
