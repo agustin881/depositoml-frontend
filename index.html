@@ -645,7 +645,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v84</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v85</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -2968,8 +2968,9 @@
       if(filas.length){
         html += `<div class="group-h">SKUs que salieron sin verificar por EAN (top ${filas.length})</div>
           <div class="desp-scroll"><table class="tr-tabla"><thead><tr><th>SKU</th><th>Despachados</th><th>✅ EAN</th><th>🔑</th><th>⬜</th><th>Motivo</th><th>Qué hacer</th></tr></thead><tbody>`;
-        for(const f of filas) html += `<tr><td><b>${esc(f.sku)}</b><div style="font-size:11px;color:var(--muted2)">${esc((f.titulo||'').slice(0,42))}</div></td>
-          <td>${f.total}</td><td style="color:var(--ok,#2F9E44)">${f.ean}</td><td style="color:#B88207">${f.aprobado}</td><td>${f.sin}</td>
+        for(const f of filas) html += `<tr><td><b>${esc(f.sku)}</b><div style="font-size:11px;color:var(--muted2)">${esc((f.titulo||'').slice(0,42))}</div>
+            ${f.ean_codigo?`<div class="mono" style="font-size:10px;color:var(--muted2)">EAN ${esc(f.ean_codigo)}</div>`:''}</td>
+          <td>${f.total}</td><td style="color:var(--ok,#2F9E44)"><b>${f.ean}</b></td><td style="color:#B88207">${f.aprobado}</td><td>${f.sin}</td>
           <td>${esc(f.motivo)}</td><td style="font-size:11px;color:var(--muted2)">${esc(f.accion||'')}</td></tr>`;
         html += `</tbody></table></div>`;
       } else {
@@ -2996,7 +2997,7 @@
     if(cual === 'resumen'){
       const filas = [['SKU','Producto','Despachados','Verificados por EAN','Con codigo de aprobacion','Sin verificar','% verificado','En catalogo','EAN cargado','Requiere verificacion','Motivo','Que hacer']];
       for(const f of (d.resumen||[])) filas.push([f.sku, f.titulo, f.total, f.ean, f.aprobado, f.sin, f.pct_verificado+'%',
-        f.en_catalogo?'SI':'NO', f.tiene_ean?(f.ean||'SI'):'NO', f.requiere?'SI':'NO', f.motivo, f.accion]);
+        f.en_catalogo?'SI':'NO', f.tiene_ean?(f.ean_codigo||'SI'):'NO', f.requiere?'SI':'NO', f.motivo, f.accion]);
       bajarCsv(`verificacion_por_sku_${d.desde}_a_${d.hasta}.csv`, filas);
       st.className='status ok'; st.textContent=`✓ CSV por SKU descargado (${(d.resumen||[]).length} filas).`;
     } else {
