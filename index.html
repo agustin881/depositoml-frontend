@@ -109,7 +109,17 @@
   #et-ean{font-family:'JetBrains Mono',monospace; background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:1px 8px}
   .pill.verif-ean{background:#E9F9F0; color:#0B7A45}
   .pill.verif-aprob{background:#FFF3D6; color:#8a5a00; font-weight:800}
+  .pill.verif-sin{background:#F1EFEA; color:#6B675E}
   .verif-resumen{font-weight:600; font-size:12px; color:var(--muted2)}
+  .vf-btn{border:1px solid transparent; font-weight:700; cursor:pointer}
+  .vf-btn.on{border-color:currentColor; box-shadow:0 0 0 2px rgba(0,0,0,.06)}
+  /* (v83) Escaneadas hoy: encabezado con filtros fijo + lista con scroll propio */
+  .desp-head{position:sticky; top:0; z-index:3; background:var(--surface,#fff); display:flex; flex-wrap:wrap;
+             align-items:center; gap:8px; padding-top:8px; padding-bottom:8px}
+  .desp-buscar{margin-left:auto; min-width:190px; flex:0 1 260px; padding:7px 10px; font-size:13px;
+               border:1px solid var(--line2,#D9D4C9); border-radius:8px; color:var(--ink); font-family:inherit}
+  .desp-scroll{max-height:430px; overflow:auto; border:1px solid var(--line,#E5E1D8); border-radius:10px}
+  @media(max-width:640px){ .desp-scroll{max-height:340px} .desp-buscar{margin-left:0; flex:1 1 100%} }
   @media(max-width:640px){ .depcfg-row{flex-wrap:wrap} }
   .tr-card{border:1px solid var(--line2); border-radius:12px; padding:14px; margin-bottom:14px}
   .tr-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
@@ -635,7 +645,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v82</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v83</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -2894,23 +2904,69 @@
         html+=`</div></details>`;
       }
       document.getElementById('list-faltan').innerHTML=html;
-      let html2='';
-      if(d.despachadas.length){
-        const v = d.verif || {};
-        const partes = [];
-        if(v.ean) partes.push(`✅ ${v.ean} por EAN`);
-        if(v.aprobado) partes.push(`🔑 ${v.aprobado} con código de aprobación`);
-        if(v.sin) partes.push(`${v.sin} sin verificación`);
-        html2+=`<div class="group-h">Escaneadas hoy${partes.length?` · <span class="verif-resumen">${partes.join(' · ')}</span>`:''}</div><div class="list">`;
-        for(const s of d.despachadas) html2+=`<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
-          <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${s.verificacion==='aprobado'?' <span class="pill verif-aprob">🔑 aprobado</span>':s.verificacion==='ean'?' <span class="pill verif-ean">✅ EAN</span>':''}${s.colecta_carrier?` <span class="pill">${esc(s.colecta_carrier)}${s.colecta_patente?' · '+esc(s.colecta_patente):''}</span>`:''}</span>
-          <span class="venta">${esc(s.nro_venta)||""}</span>
-          <span class="u">${new Date(s.despachado_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-        html2+=`</div>`;
-      }
-      document.getElementById('list-despachadas').innerHTML=html2;
+      // (v83) Guardamos las escaneadas para poder filtrarlas por tipo de verificación
+      _despData = d.despachadas || [];
+      _despVerif = d.verif || {};
+      pintarDespachadas();
       st.textContent='';
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  // ---------- (v83) Escaneadas hoy: chip explícito + filtro por verificación ----------
+  let _despData = [], _despVerif = {}, _despFiltro = 'todas', _despBuscar = '';
+
+  function filtrarVerif(f){
+    _despFiltro = (_despFiltro === f) ? 'todas' : f;
+    pintarDespachadas();
+  }
+
+  function pintarDespachadas(){
+    const cont = document.getElementById('list-despachadas'); if(!cont) return;
+    if(!_despData.length){ cont.innerHTML=''; return; }
+    const v = _despVerif || {};
+    // Los tres números son botones: tocás uno y ves solo esas
+    const chip = (f, txt, css) => `<button class="mini vf-btn${_despFiltro===f?' on':''}" onclick="filtrarVerif('${f}')" style="${css}">${txt}</button>`;
+    let head = `<div class="group-h desp-head">Escaneadas hoy (${_despData.length}) · <span class="verif-resumen">`;
+    head += chip('ean', `✅ ${v.ean||0} por EAN`, 'background:#E9F9F0; color:#0B7A45');
+    head += ' ' + chip('aprobado', `🔑 ${v.aprobado||0} con código`, 'background:#FFF3D6; color:#8a5a00');
+    head += ' ' + chip('sin', `⬜ ${v.sin||0} sin verificar`, 'background:#F1EFEA; color:#6B675E');
+    if(_despFiltro !== 'todas') head += ` <button class="mini" onclick="filtrarVerif('${_despFiltro}')">✕ ver todas</button>`;
+    head += `</span>`;
+    head += `<input id="desp-buscar" class="desp-buscar" placeholder="🔎 filtrar por SKU o venta…" value="${esc(_despBuscar)}"
+              oninput="_despBuscar=this.value; clearTimeout(window._dbT); window._dbT=setTimeout(pintarDespachadas,250)">`;
+    head += `</div>`;
+
+    const q = (_despBuscar||'').trim().toUpperCase();
+    const filas = _despData
+      .filter(s => _despFiltro==='todas' ? true
+        : _despFiltro==='sin' ? !s.verificacion
+        : s.verificacion === _despFiltro)
+      .filter(s => !q || String(s.sku||'').toUpperCase().includes(q)
+                     || String(s.nro_venta||'').includes(q)
+                     || String(s.titulo||'').toUpperCase().includes(q));
+
+    // Scroll propio: la lista no empuja la página aunque haya 300 filas
+    let html = head + `<div class="desp-scroll"><div class="list">`;
+    if(!filas.length) html += '<div class="status">No hay escaneadas con ese filtro.</div>';
+    for(const s of filas){
+      // Chip SIEMPRE presente: si no se verificó, se dice explícitamente
+      const vchip = s.verificacion==='aprobado'
+        ? ' <span class="pill verif-aprob">🔑 aprobado</span>'
+        : s.verificacion==='ean'
+        ? ' <span class="pill verif-ean">✅ EAN</span>'
+        : ' <span class="pill verif-sin">⬜ sin verificar</span>';
+      html += `<div class="row r4"><span class="sku">${esc(s.sku)||"SIN SKU"}</span>
+        <span class="ti" title="${esc(s.titulo)}">${esc(s.titulo)} <span class="pill">${esc(s.tipo)||""}</span>${vchip}${s.colecta_carrier?` <span class="pill">${esc(s.colecta_carrier)}${s.colecta_patente?' · '+esc(s.colecta_patente):''}</span>`:''}</span>
+        <span class="venta">${esc(s.nro_venta)||""}</span>
+        <span class="u">${new Date(s.despachado_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+    }
+    html += '</div></div>';
+    if(filas.length !== _despData.length)
+      html += `<div class="status">Mostrando ${filas.length} de ${_despData.length} escaneadas.</div>`;
+    cont.innerHTML = html;
+    // Mantener el foco y el cursor en el buscador mientras se tipea
+    const bi = document.getElementById('desp-buscar');
+    if(bi && _despBuscar){ bi.focus(); bi.setSelectionRange(bi.value.length, bi.value.length); }
   }
 
   // ---------- Centro de despacho: destinos + camiones (Parte 2) ----------
