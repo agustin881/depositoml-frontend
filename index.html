@@ -645,7 +645,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v83</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v84</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -772,6 +772,23 @@
         <div class="status" id="status-verif"></div>
         <div id="list-faltan"></div>
         <div id="list-despachadas"></div>
+      </div>
+
+      <div class="card-box" id="verif-reporte-card">
+        <div class="seg-head">
+          <h2>📊 Reporte de verificación · ¿por qué no se verifican?</h2>
+          <button class="btn-light" onclick="verifReporte()">↻ Generar</button>
+        </div>
+        <p class="hint">Cruza todo lo despachado en el período con el catálogo y te dice, SKU por SKU, <b>por qué</b> salió sin verificar: no está en el catálogo, no tiene EAN cargado, está marcado como "no requiere"… Ordenado por los que más paquetes sacaron sin EAN.</p>
+        <div class="hist-controls">
+          <label>Desde <input type="date" id="vr-desde"></label>
+          <label>Hasta <input type="date" id="vr-hasta"></label>
+          <button class="btn-scan" onclick="verifReporte()">Ver reporte</button>
+          <button class="btn-light" onclick="verifCsv('resumen')">⬇ CSV por SKU</button>
+          <button class="btn-light" onclick="verifCsv('detalle')">⬇ CSV detallado</button>
+        </div>
+        <div class="status" id="vr-status"></div>
+        <div id="vr-resultado"></div>
       </div>
 
       <div class="card-box" id="ef-full-card">
@@ -1435,7 +1452,7 @@
     try{ if(name!=='demo') localStorage.setItem('dep_tab', name); }catch(e){}
     _detenerCamaraTodo();
     if(name === 'despachar'){
-      cargarDestinos(); cargarDespachados(); cargarColectaHoy();
+      cargarDestinos(); cargarDespachados(); cargarColectaHoy(); vrFechasDefault();
       setTimeout(()=>{ const i=document.getElementById('scan-input'); if(i) i.focus(); }, 50);
     }
     if(name === 'imprimir') cargarSeparables();
@@ -2910,6 +2927,90 @@
       pintarDespachadas();
       st.textContent='';
     }catch(e){ st.className='status err'; st.textContent='Error: '+e.message; }
+  }
+
+  // ---------- (v84) Reporte de verificación: por qué no se verifican ----------
+  let _vrData = null;
+
+  function vrFechasDefault(){
+    const h = document.getElementById('vr-hasta'), d = document.getElementById('vr-desde');
+    if(h && !h.value) h.value = fechaHoyLocal();
+    if(d && !d.value){ const x = new Date(); x.setDate(x.getDate() - 6); d.value = x.toLocaleDateString('en-CA'); }
+  }
+
+  async function verifReporte(){
+    vrFechasDefault();
+    const st = document.getElementById('vr-status'), out = document.getElementById('vr-resultado');
+    const desde = document.getElementById('vr-desde').value, hasta = document.getElementById('vr-hasta').value;
+    st.className='status'; st.textContent='Generando el reporte…'; out.innerHTML='';
+    try{
+      const r = await authFetch(`${API}/api/despacho/verif-reporte?desde=${desde}&hasta=${hasta}`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      _vrData = d;
+      const t = d.totales || {};
+      const pct = t.total ? Math.round((t.ean/t.total)*100) : 0;
+      st.className='status'; st.textContent = `${t.total} paquetes despachados del ${fFecha(d.desde)} al ${fFecha(d.hasta)} · ${d.skus} SKUs distintos.`;
+      let html = `<div class="totals" style="margin:10px 0">
+        <div class="total-box"><div class="n" style="color:var(--ok,#2F9E44)">${t.ean||0}</div><div class="l">✅ por EAN (${pct}%)</div></div>
+        <div class="total-box"><div class="n" style="color:#B88207">${t.aprobado||0}</div><div class="l">🔑 con código</div></div>
+        <div class="total-box"><div class="n" style="color:var(--muted2)">${t.sin||0}</div><div class="l">⬜ sin verificar</div></div>
+      </div>`;
+      // El "por qué" en una línea por motivo
+      const pm = d.por_motivo || {};
+      const motivos = Object.keys(pm).sort((a,b)=>pm[b].paquetes_sin_ean-pm[a].paquetes_sin_ean);
+      if(motivos.length){
+        html += `<div class="group-h">Motivos (ordenados por paquetes que salieron sin EAN)</div><div class="list">`;
+        for(const m of motivos) html += `<div class="row r4"><span class="sku" style="min-width:auto">${pm[m].paquetes_sin_ean}</span>
+          <span class="ti"><b>${esc(m)}</b></span><span class="u">${pm[m].skus} SKU(s)</span></div>`;
+        html += `</div>`;
+      }
+      const filas = (d.resumen||[]).filter(f => (f.sin + f.aprobado) > 0).slice(0, 100);
+      if(filas.length){
+        html += `<div class="group-h">SKUs que salieron sin verificar por EAN (top ${filas.length})</div>
+          <div class="desp-scroll"><table class="tr-tabla"><thead><tr><th>SKU</th><th>Despachados</th><th>✅ EAN</th><th>🔑</th><th>⬜</th><th>Motivo</th><th>Qué hacer</th></tr></thead><tbody>`;
+        for(const f of filas) html += `<tr><td><b>${esc(f.sku)}</b><div style="font-size:11px;color:var(--muted2)">${esc((f.titulo||'').slice(0,42))}</div></td>
+          <td>${f.total}</td><td style="color:var(--ok,#2F9E44)">${f.ean}</td><td style="color:#B88207">${f.aprobado}</td><td>${f.sin}</td>
+          <td>${esc(f.motivo)}</td><td style="font-size:11px;color:var(--muted2)">${esc(f.accion||'')}</td></tr>`;
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<div class="status ok">✓ Todo lo despachado en el período se verificó por EAN.</div>`;
+      }
+      out.innerHTML = html;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  // CSV (con BOM para que Excel en español abra bien los acentos)
+  function bajarCsv(nombre, filas){
+    const escCsv = v => { const s = (v===null||v===undefined) ? '' : String(v); return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+    const txt = '﻿' + filas.map(f => f.map(escCsv).join(';')).join('\r\n');
+    const blob = new Blob([txt], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  }
+
+  async function verifCsv(cual){
+    const st = document.getElementById('vr-status');
+    if(!_vrData){ await verifReporte(); if(!_vrData) return; }
+    const d = _vrData;
+    if(cual === 'resumen'){
+      const filas = [['SKU','Producto','Despachados','Verificados por EAN','Con codigo de aprobacion','Sin verificar','% verificado','En catalogo','EAN cargado','Requiere verificacion','Motivo','Que hacer']];
+      for(const f of (d.resumen||[])) filas.push([f.sku, f.titulo, f.total, f.ean, f.aprobado, f.sin, f.pct_verificado+'%',
+        f.en_catalogo?'SI':'NO', f.tiene_ean?(f.ean||'SI'):'NO', f.requiere?'SI':'NO', f.motivo, f.accion]);
+      bajarCsv(`verificacion_por_sku_${d.desde}_a_${d.hasta}.csv`, filas);
+      st.className='status ok'; st.textContent=`✓ CSV por SKU descargado (${(d.resumen||[]).length} filas).`;
+    } else {
+      const filas = [['Fecha','Hora','SKU','Producto','Tipo','Venta','Envio','Verificacion','Usuario','Destino']];
+      for(const x of (d.detalle||[])){
+        const f = x.despachado_at ? new Date(x.despachado_at) : null;
+        filas.push([ f?f.toLocaleDateString('es-AR'):'', f?f.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'',
+          x.sku||'', x.titulo||'', x.tipo||'', x.nro_venta||'', x.shipment_id||'',
+          x.verificacion==='ean'?'EAN':x.verificacion==='aprobado'?'CODIGO DE APROBACION':'SIN VERIFICAR',
+          x.usuario||'', x.destino_nombre||'' ]);
+      }
+      bajarCsv(`despachos_detalle_${d.desde}_a_${d.hasta}.csv`, filas);
+      st.className='status ok'; st.textContent=`✓ CSV detallado descargado (${(d.detalle||[]).length} despachos).`;
+    }
   }
 
   // ---------- (v83) Escaneadas hoy: chip explícito + filtro por verificación ----------
