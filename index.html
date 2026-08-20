@@ -645,7 +645,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v85</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v86</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1191,8 +1191,10 @@
           <button class="btn-light" onclick="agregarProducto()">Agregar</button>
         </div>
         <div class="verif-add">
-          <input id="vp-buscar" placeholder="🔎 Buscar por SKU o EAN…" oninput="clearTimeout(window._vpT); window._vpT=setTimeout(buscarProductos, 350)">
+          <input id="vp-buscar" placeholder="🔎 Buscar por SKU o EAN…" style="flex:1; min-width:200px" oninput="clearTimeout(window._vpT); window._vpT=setTimeout(buscarProductos, 350)">
+          <button class="btn-light" onclick="descargarCatalogo()">⬇ Descargar catálogo completo</button>
         </div>
+        <p class="hint" style="margin:2px 0 8px">💡 <b>Edición masiva:</b> descargá el catálogo completo, abrilo en Excel, corregí o agregá EANs y volvé a subirlo con <b>📄 Subir Excel</b> (arriba). Los SKU que ya existen se actualizan y los nuevos se agregan — nada se borra. El archivo baja con las columnas exactas que espera el importador.</p>
         <div id="verif-lista"><div class="status">—</div></div>
       </div>
 
@@ -1940,12 +1942,59 @@
       const r = await authFetch(`${API}/api/despacho/productos${b?'?buscar='+encodeURIComponent(b):''}`);
       const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
       if(!(d.productos||[]).length){ cont.innerHTML='<div class="status">Sin productos'+(b?' que coincidan':'')+'. Importá o agregá arriba.</div>'; return; }
-      cont.innerHTML = `<table class="tr-tabla" style="max-width:640px"><thead><tr><th>SKU</th><th>EAN</th><th>Verifica</th><th></th></tr></thead><tbody>`+
-        d.productos.map(p=>`<tr><td><b>${esc(p.sku)}</b></td><td class="mono">${esc(p.ean||'—')}</td>
-          <td><input type="checkbox" ${p.requiere?'checked':''} onchange="reqProducto('${esc(p.sku)}', this.checked)"></td>
-          <td><button class="mini del" onclick="borrarProducto('${esc(p.sku)}')">Borrar</button></td></tr>`).join('')+'</tbody></table>'+
-        (d.productos.length>=120?'<div class="status">Mostrando los primeros 120 — usá el buscador para el resto.</div>':'');
+      cont.innerHTML = `<table class="tr-tabla" style="max-width:700px"><thead><tr><th>SKU</th><th>EAN</th><th>Verifica</th><th></th></tr></thead><tbody>`+
+        d.productos.map(p=>{
+          if(_editSku === p.sku){
+            // Fila en edición: SKU, EAN y el tilde se editan y se guardan juntos
+            return `<tr style="background:#F7FAFF"><td><input id="ed-sku" value="${esc(p.sku)}" style="width:130px; text-transform:uppercase" maxlength="40"></td>
+              <td><input id="ed-ean" value="${esc(p.ean||'')}" class="mono" style="width:150px" maxlength="20" placeholder="sin EAN"
+                    onkeydown="if(event.key==='Enter') guardarEdicion('${esc(p.sku)}')"></td>
+              <td><input type="checkbox" id="ed-req" ${p.requiere?'checked':''}></td>
+              <td><button class="mini" onclick="guardarEdicion('${esc(p.sku)}')">💾 Guardar</button>
+                  <button class="mini" onclick="_editSku=null; buscarProductos()">Cancelar</button></td></tr>`;
+          }
+          return `<tr><td><b>${esc(p.sku)}</b></td><td class="mono">${esc(p.ean||'—')}</td>
+            <td><input type="checkbox" ${p.requiere?'checked':''} onchange="reqProducto('${esc(p.sku)}', this.checked)"></td>
+            <td><button class="mini" onclick="_editSku='${esc(p.sku)}'; buscarProductos()">✏ Editar</button>
+                <button class="mini del" onclick="borrarProducto('${esc(p.sku)}')">Borrar</button></td></tr>`;
+        }).join('')+'</tbody></table>'+
+        (d.productos.length>=120?'<div class="status">Mostrando los primeros 120 — usá el buscador, o descargá el catálogo completo para verlo todo.</div>':'');
     }catch(e){ cont.innerHTML='<div class="status err">Error: '+esc(e.message)+'</div>'; }
+  }
+
+  // (v86) Edición inline de un producto del catálogo
+  let _editSku = null;
+
+  async function guardarEdicion(skuOriginal){
+    const st = document.getElementById('verif-status');
+    const sku = (document.getElementById('ed-sku').value||'').trim().toUpperCase();
+    const ean = (document.getElementById('ed-ean').value||'').trim();
+    const requiere = document.getElementById('ed-req').checked;
+    if(!sku){ st.className='status err'; st.textContent='El SKU no puede quedar vacío.'; return; }
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos/editar`, {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({sku_original: skuOriginal, sku, ean, requiere})});
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      _editSku = null;
+      st.className='status ok';
+      st.textContent = `✓ ${skuOriginal}${d.renombrado?' → '+d.sku:''} guardado (EAN ${d.ean||'—'} · ${d.requiere?'requiere verificación':'no requiere'}).`;
+      cargarVerif();
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+  }
+
+  // (v86) Descarga del catálogo COMPLETO en el mismo formato que acepta el importador
+  async function descargarCatalogo(){
+    const st = document.getElementById('verif-status');
+    st.className='status'; st.textContent='Preparando el catálogo completo…';
+    try{
+      const r = await authFetch(`${API}/api/despacho/productos?todo=1`);
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      const filas = [['SKU','EAN','REQUIERE']];
+      for(const p of (d.productos||[])) filas.push([p.sku, p.ean||'', p.requiere===false?'NO':'SI']);
+      bajarCsv(`catalogo_verificacion_${fechaHoyLocal()}.csv`, filas);
+      st.className='status ok';
+      st.textContent = `✓ ${d.total} productos descargados. Editalo en Excel (columna A=SKU, B=EAN, C=SI/NO) y volvé a subirlo con "📄 Subir Excel" para actualizar en masa.`;
+    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
   }
 
   async function reqProducto(sku, requiere){
