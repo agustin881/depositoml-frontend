@@ -645,7 +645,7 @@
 
   <header class="appbar">
     <div class="appbar-inner">
-      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v86</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
+      <div class="brand"><span class="dot"></span>Depósito <span class="app-ver">v87</span> <select id="dep-selector" class="dep-selector" onchange="cambiarDeposito()" title="Depósito de origen"><option value="">📍 Arévalo Soriano</option></select></div>
       <div class="spacer"></div>
       <div class="codigo-chip" id="cb-body"></div>
       <button class="salir" onclick="salir()">Salir</button>
@@ -1195,6 +1195,7 @@
           <button class="btn-light" onclick="descargarCatalogo()">⬇ Descargar catálogo completo</button>
         </div>
         <p class="hint" style="margin:2px 0 8px">💡 <b>Edición masiva:</b> descargá el catálogo completo, abrilo en Excel, corregí o agregá EANs y volvé a subirlo con <b>📄 Subir Excel</b> (arriba). Los SKU que ya existen se actualizan y los nuevos se agregan — nada se borra. El archivo baja con las columnas exactas que espera el importador.</p>
+        <div id="verif-msg" class="status" style="display:none"></div>
         <div id="verif-lista"><div class="status">—</div></div>
       </div>
 
@@ -1965,21 +1966,38 @@
   // (v86) Edición inline de un producto del catálogo
   let _editSku = null;
 
+  // (v87) El aviso va JUNTO a la tabla (antes iba arriba de todo, fuera de la
+  // vista, y encima lo pisaba el resumen del catálogo: parecía que no guardaba).
+  function vpMsg(txt, tipo){
+    const el = document.getElementById('verif-msg'); if(!el) return;
+    if(!txt){ el.style.display='none'; el.innerHTML=''; return; }
+    el.style.display='block';
+    el.className = 'status' + (tipo ? ' '+tipo : '');
+    el.innerHTML = txt;
+    clearTimeout(window._vpMsgT);
+    if(tipo==='ok') window._vpMsgT = setTimeout(()=>{ const e2=document.getElementById('verif-msg'); if(e2){ e2.style.display='none'; } }, 6000);
+  }
+
   async function guardarEdicion(skuOriginal){
-    const st = document.getElementById('verif-status');
+    const btns = document.querySelectorAll('#verif-lista button');
     const sku = (document.getElementById('ed-sku').value||'').trim().toUpperCase();
     const ean = (document.getElementById('ed-ean').value||'').trim();
     const requiere = document.getElementById('ed-req').checked;
-    if(!sku){ st.className='status err'; st.textContent='El SKU no puede quedar vacío.'; return; }
+    if(!sku){ vpMsg('El SKU no puede quedar vacío.', 'err'); return; }
+    vpMsg('Guardando…');
+    btns.forEach(b=>b.disabled=true);
     try{
       const r = await authFetch(`${API}/api/despacho/productos/editar`, {method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({sku_original: skuOriginal, sku, ean, requiere})});
-      const d = await r.json(); if(!r.ok) throw new Error(d.error||'');
+      const d = await r.json(); if(!r.ok) throw new Error(d.error||'No se pudo guardar');
       _editSku = null;
-      st.className='status ok';
-      st.textContent = `✓ ${skuOriginal}${d.renombrado?' → '+d.sku:''} guardado (EAN ${d.ean||'—'} · ${d.requiere?'requiere verificación':'no requiere'}).`;
-      cargarVerif();
-    }catch(e){ st.className='status err'; st.textContent='Error: '+esc(e.message); }
+      await cargarVerif();   // primero refresca (pisa el status de arriba)…
+      // …y recién después mostramos el ✓, así queda visible
+      vpMsg(`✓ <b>${esc(skuOriginal)}</b>${d.renombrado?' → <b>'+esc(d.sku)+'</b>':''} guardado · EAN <span class="mono">${esc(d.ean||'—')}</span> · ${d.requiere?'requiere verificación':'no requiere'}`, 'ok');
+    }catch(e){
+      btns.forEach(b=>b.disabled=false);
+      vpMsg('⛔ No se guardó: '+esc(e.message), 'err');
+    }
   }
 
   // (v86) Descarga del catálogo COMPLETO en el mismo formato que acepta el importador
@@ -2005,8 +2023,11 @@
     if(!confirm('¿Borrar '+sku+' del catálogo de verificación?')) return;
     try{
       const r = await authFetch(`${API}/api/despacho/productos/borrar`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sku})});
-      if(r.ok){ cargarVerif(); }
-    }catch(e){}
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||'No se pudo borrar');
+      await cargarVerif();
+      vpMsg(`✓ <b>${esc(sku)}</b> borrado del catálogo.`, 'ok');
+    }catch(e){ vpMsg('⛔ No se borró: '+esc(e.message), 'err'); }
   }
 
   // ── Config → Depósitos: pescar de ML, alias y principal ──
